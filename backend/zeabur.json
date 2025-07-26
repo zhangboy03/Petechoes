@@ -5,7 +5,7 @@
       "pip install -r requirements.txt"
     ]
   },
-  "start": "python start_server.py",
+  "start": "python app.py",
   "environment": {
     "PYTHON_VERSION": "3.11"
   }
