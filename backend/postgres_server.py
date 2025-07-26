@@ -247,6 +247,48 @@ def get_status(image_id):
         print(f"❌ 获取状态失败: {e}")
         return jsonify({'error': f'获取状态失败: {str(e)}'}), 500
 
+@app.route('/', methods=['GET'])
+def home():
+    """根路径"""
+    return jsonify({
+        'name': 'Petechoes Backend',
+        'description': '宠物纪念APP后端服务',
+        'status': 'running',
+        'version': '1.0.0',
+        'endpoints': [
+            '/health - 健康检查',
+            '/upload - 图片上传',
+            '/status/<id> - 查询状态', 
+            '/image/<id> - 获取图片',
+            '/test - 测试接口'
+        ]
+    })
+
+@app.route('/test', methods=['GET'])
+def test():
+    """测试接口"""
+    env_info = {
+        'POSTGRES_HOST': os.getenv('POSTGRES_HOST', 'Not set'),
+        'POSTGRES_PORT': os.getenv('POSTGRES_PORT', 'Not set'),
+        'POSTGRES_DATABASE': os.getenv('POSTGRES_DATABASE', 'Not set'),
+        'POSTGRES_USER': os.getenv('POSTGRES_USER', 'Not set'),
+        'MODELSCOPE_API_KEY': 'Set' if os.getenv('MODELSCOPE_API_KEY') else 'Not set',
+        'PUBLIC_URL': os.getenv('PUBLIC_URL', 'Not set'),
+        'PORT': os.getenv('PORT', '8080')
+    }
+    
+    return jsonify({
+        'message': '测试接口正常',
+        'environment': env_info,
+        'database_config': {
+            'host': DB_CONFIG['host'],
+            'port': DB_CONFIG['port'],
+            'database': DB_CONFIG['database'],
+            'user': DB_CONFIG['user'],
+            'password_set': bool(DB_CONFIG['password'])
+        }
+    })
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """健康检查"""
