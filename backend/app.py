@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-# ModelScope API配置
-MODELSCOPE_API_URL = 'https://api-inference.modelscope.cn/v1/images/generations'
+# Black Forest Lab API配置
+BFL_API_URL = 'https://api.bfl.ai/v1/flux-kontext-max'
 
 # 数据库配置
 DB_CONFIG = {
@@ -34,11 +34,11 @@ DB_CONFIG = {
     'password': os.getenv('POSTGRES_PASSWORD', os.getenv('PASSWORD', 'laKs69d7AVXmTJ5H1wLGBrIqv0h43k28'))
 }
 
-MODELSCOPE_API_KEY = os.getenv('MODELSCOPE_API_KEY', 'ms-6ab8bbf1-8fbd-4859-9a93-742f4edc5da8')
+BFL_API_KEY = os.getenv('BFL_API_KEY', '7b9e4ba5-8136-4a85-94e6-e1c45fd5d0c0')
 
 print("🚀 Petechoes完整应用启动中...")
 print(f"🔧 数据库配置: {DB_CONFIG['host']}:{DB_CONFIG['port']}")
-print(f"🔑 ModelScope API Key: {'✅已设置' if MODELSCOPE_API_KEY else '❌未设置'}")
+print(f"🔑 BFL API Key: {'✅已设置' if BFL_API_KEY else '❌未设置'}")
 
 def get_db_connection_with_retry(max_retries=3, retry_delay=1):
     """带重试逻辑的数据库连接"""
@@ -104,7 +104,7 @@ def home():
             '/status/<id> - 查询状态',
             '/image/<id> - 获取图片',
             '/test - 测试接口',
-            '/test-api - 测试ModelScope API'
+            '/test-api - 测试BFL API'
         ]
     })
 
@@ -125,7 +125,7 @@ def test():
         'POSTGRES_PORT': os.getenv('POSTGRES_PORT', 'Not set'),
         'POSTGRES_DATABASE': os.getenv('POSTGRES_DATABASE', 'Not set'),
         'POSTGRES_USER': os.getenv('POSTGRES_USER', 'Not set'),
-        'MODELSCOPE_API_KEY': 'Set' if os.getenv('MODELSCOPE_API_KEY') else 'Not set',
+        'BFL_API_KEY': 'Set' if os.getenv('BFL_API_KEY') else 'Not set',
         'PUBLIC_URL': os.getenv('PUBLIC_URL', 'Not set'),
         'PORT': os.getenv('PORT', '8080')
     }
@@ -143,30 +143,33 @@ def test():
     })
 
 @app.route('/test-api', methods=['GET'])
-def test_modelscope_api():
-    """测试ModelScope API"""
+def test_bfl_api():
+    """测试Black Forest Lab API"""
     try:
-        logger.info("🧪 测试ModelScope API...")
+        logger.info("🧪 测试BFL API...")
         
-        # 使用示例图片测试API  
+        # 使用BFL API格式
         headers = {
-            'Authorization': 'Bearer ms-6ab8bbf1-8fbd-4859-9a93-742f4edc5da8',
+            'x-key': BFL_API_KEY,
             'Content-Type': 'application/json'
         }
         
         payload = {
-            'model': 'black-forest-labs/FLUX.1-Kontext-dev',
-            'prompt': '把女孩的头发变成蓝色',
-            'image_url': "https://resources.modelscope.cn/aigc/image_edit.png"
+            'prompt': 'ein fantastisches bild',
+            'input_image': 'https://resources.modelscope.cn/aigc/image_edit.png',
+            'seed': 42,
+            'aspect_ratio': '1:1',
+            'output_format': 'jpeg',
+            'prompt_upsampling': False,
+            'safety_tolerance': 2
         }
         
         logger.info(f"🧪 测试payload: {payload}")
-        logger.info(f"🧪 API Key: ms-6ab8bbf...")
+        logger.info(f"🧪 API Key: {BFL_API_KEY[:10]}...")
         
-        import json
         response = requests.post(
-            MODELSCOPE_API_URL, 
-            data=json.dumps(payload, ensure_ascii=False).encode('utf-8'), 
+            BFL_API_URL, 
+            json=payload, 
             headers=headers,
             timeout=60
         )
@@ -177,16 +180,16 @@ def test_modelscope_api():
         if response.status_code == 200:
             return jsonify({
                 'success': True,
-                'message': 'ModelScope API测试成功',
+                'message': 'BFL API测试成功',
                 'response': response.json()
             })
         else:
             return jsonify({
                 'success': False,
-                'message': 'ModelScope API测试失败',
+                'message': 'BFL API测试失败',
                 'status_code': response.status_code,
                 'response': response.text
-            }), 400
+            }), response.status_code
             
     except Exception as e:
         logger.error(f"🧪 API测试异常: {e}")
@@ -241,7 +244,7 @@ def upload_image():
         return jsonify({'error': f'上传失败: {str(e)}'}), 500
 
 def generate_new_image(image_id):
-    """使用ModelScope生成新图片"""
+    """使用Black Forest Lab生成新图片"""
     try:
         logger.info(f"🔍 开始处理图片 {image_id}")
         
@@ -250,21 +253,25 @@ def generate_new_image(image_id):
         image_url = f"{base_url}/image/{image_id}?type=original"
         logger.info(f"✅ 构建图片URL: {image_url}")
         
-        # 调用ModelScope API（完全按照官方示例）
+        # 调用BFL API
         headers = {
-            'Authorization': 'Bearer ms-6ab8bbf1-8fbd-4859-9a93-742f4edc5da8',
+            'x-key': BFL_API_KEY,
             'Content-Type': 'application/json'
         }
         
         payload = {
-            'model': 'black-forest-labs/FLUX.1-Kontext-dev',
-            'prompt': '根据用户上传的宠物图片，生成宠物坐在椅子上等待被拍照的图片，温馨的宠物纪念风格，温暖的色调，适合作为手机应用背景',
-            'image_url': image_url
+            'prompt': 'Transform this pet image into a warm memorial photo with the pet sitting on a chair, waiting to be photographed. Cozy atmosphere, warm tones, suitable for mobile app background.',
+            'input_image': image_url,
+            'seed': 42,
+            'aspect_ratio': '1:1',
+            'output_format': 'jpeg',
+            'prompt_upsampling': False,
+            'safety_tolerance': 2
         }
         
-        logger.info(f"🔄 调用ModelScope API...")
-        logger.info(f"🌐 API URL: {MODELSCOPE_API_URL}")
-        logger.info(f"🔑 API Key: ms-6ab8bbf...")
+        logger.info(f"🔄 调用BFL API...")
+        logger.info(f"🌐 API URL: {BFL_API_URL}")
+        logger.info(f"🔑 API Key: {BFL_API_KEY[:10]}...")
         logger.info(f"📋 Payload: {payload}")
         
         # 首先测试我们的图片URL是否可以访问
@@ -274,11 +281,10 @@ def generate_new_image(image_id):
         except Exception as e:
             logger.warning(f"⚠️ 图片URL测试失败: {e}")
         
-        # 使用正确的请求格式
-        import json
+        # 使用BFL API格式
         response = requests.post(
-            MODELSCOPE_API_URL, 
-            data=json.dumps(payload, ensure_ascii=False).encode('utf-8'), 
+            BFL_API_URL, 
+            json=payload, 
             headers=headers,
             timeout=60
         )
@@ -290,9 +296,20 @@ def generate_new_image(image_id):
             result = response.json()
             logger.info(f"🔍 API返回结构: {list(result.keys())}")
             
-            # 使用正确的响应格式
-            if 'images' in result and len(result['images']) > 0:
-                generated_image_url = result['images'][0]['url']
+            # BFL API响应格式可能不同，需要根据实际响应调整
+            if 'id' in result:
+                # BFL API通常返回任务ID，需要轮询结果
+                task_id = result['id']
+                logger.info(f"✅ 获得任务ID: {task_id}")
+                
+                # 这里可能需要实现轮询逻辑来获取最终结果
+                # 暂时标记为processing，后续可以添加轮询机制
+                update_image_status(image_id, 'processing')
+                logger.info(f"🔄 任务已提交，ID: {task_id}")
+                
+            elif 'url' in result:
+                # 如果直接返回图片URL
+                generated_image_url = result['url']
                 logger.info(f"✅ 获得生成图片URL: {generated_image_url}")
                 
                 # 下载生成的图片
@@ -316,10 +333,10 @@ def generate_new_image(image_id):
                     logger.error(f"❌ 下载生成图片失败: {img_response.status_code}")
                     update_image_status(image_id, 'failed')
             else:
-                logger.error(f"❌ API响应中未找到images字段")
+                logger.error(f"❌ API响应格式未知: {result}")
                 update_image_status(image_id, 'failed')
         else:
-            logger.error(f"❌ ModelScope API调用失败: {response.status_code}, 响应: {response.text}")
+            logger.error(f"❌ BFL API调用失败: {response.status_code}, 响应: {response.text}")
             update_image_status(image_id, 'failed')
             
     except Exception as e:
