@@ -7,7 +7,7 @@ import requests
 from PIL import Image
 import io
 import threading
-from config import DB_CONFIG, MODELSCOPE_API_KEY
+from config import DB_CONFIG, MODELSCOPE_API_KEY, get_db_connection_with_retry
 
 app = Flask(__name__)
 CORS(app)
@@ -18,8 +18,7 @@ MODELSCOPE_API_URL = 'https://api.modelscope.cn/v1/models/black-forest-labs/FLUX
 def get_db_connection():
     """获取数据库连接"""
     try:
-        conn = psycopg2.connect(**DB_CONFIG)
-        return conn
+        return get_db_connection_with_retry(max_retries=3, retry_delay=1)
     except Exception as e:
         print(f"❌ 数据库连接失败: {e}")
         return None
