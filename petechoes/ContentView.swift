@@ -8,6 +8,45 @@
 import SwiftUI
 import PhotosUI
 
+// 图片选择器，支持相机和相册
+struct CameraImagePicker: UIViewControllerRepresentable {
+    @Binding var selectedImage: UIImage?
+    @Environment(\.presentationMode) var presentationMode
+    var sourceType: UIImagePickerController.SourceType
+    
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = sourceType
+        picker.delegate = context.coordinator
+        return picker
+    }
+    
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let parent: CameraImagePicker
+        
+        init(_ parent: CameraImagePicker) {
+            self.parent = parent
+        }
+        
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                parent.selectedImage = image
+            }
+            parent.presentationMode.wrappedValue.dismiss()
+        }
+        
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.presentationMode.wrappedValue.dismiss()
+        }
+    }
+}
+
 @available(iOS 16.0, *)
 struct ContentView: View {
     @State private var currentPage = 1
@@ -18,6 +57,13 @@ struct ContentView: View {
     @State private var generatedImage: UIImage? = nil
     @State private var currentWaitingMessageIndex = 0
     @State private var timer: Timer?
+    @State private var showNextArrow = false
+    @State private var showImagePicker = false
+    @State private var showCamera = false
+    @State private var currentPhotoIndex = 0 // 当前选择的照片索引 (0-3)
+    @State private var memoryPhotos: [UIImage?] = [nil, nil, nil, nil] // 4张记忆照片
+    @State private var processedPhotos: [UIImage?] = [nil, nil, nil, nil] // AI处理后的照片
+    @State private var isProcessingPhotos = false
     
     // 后端服务器配置 - 使用Zeabur公网URL
     let backendUrl = "https://petecho.zeabur.app"
@@ -56,12 +102,51 @@ struct ContentView: View {
                     ZStack {
                         if let generatedImage = generatedImage {
                             // 显示生成的纪念照 - 保持原始比例，适配屏幕
-                            Image(uiImage: generatedImage)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: geometry.size.width, height: geometry.size.height)
-                                .clipped()
-                                .background(Color.black) // 添加黑色背景
+                            ZStack {
+                                Image(uiImage: generatedImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: geometry.size.width, height: geometry.size.height)
+                                    .clipped()
+                                    .background(Color.black) // 添加黑色背景
+                                
+                                // 延迟显示的下一步箭头
+                                if showNextArrow {
+                                    VStack {
+                                        Spacer()
+                                        
+                                        Button(action: {
+                                            withAnimation(.easeInOut(duration: 0.5)) {
+                                                currentPage = 4 // 跳转到第4页
+                                            }
+                                        }) {
+                                            HStack(spacing: 10) {
+                                                Text("下一步")
+                                                    .font(.system(size: 18, weight: .medium))
+                                                    .foregroundColor(.white)
+                                                
+                                                Image(systemName: "arrow.right")
+                                                    .font(.system(size: 16, weight: .medium))
+                                                    .foregroundColor(.white)
+                                            }
+                                            .padding(.horizontal, 20)
+                                            .padding(.vertical, 12)
+                                            .background(Color.black.opacity(0.7))
+                                            .cornerRadius(25)
+                                        }
+                                        .padding(.bottom, 50)
+                                        .transition(.opacity.combined(with: .scale))
+                                    }
+                                }
+                            }
+                            .onAppear {
+                                // 生成图片显示后，延迟3秒显示箭头
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                                    withAnimation(.easeInOut(duration: 0.8)) {
+                                        showNextArrow = true
+                                    }
+                                }
+                            }
                         } else {
                             // 默认第二页背景
                             Image("2")
@@ -136,6 +221,7 @@ struct ContentView: View {
                                         selectedImage = nil
                                         selectedItem = nil
                                         uploadStatus = ""
+                                        showNextArrow = false
                                     }) {
                                         Image(systemName: "arrow.clockwise")
                                             .font(.title2)
@@ -170,11 +256,293 @@ struct ContentView: View {
                             }
                         }
                     }
+                } else if currentPage == 5 {
+                    // 第5页 - 临时页面
+                    ZStack {
+                        Color.purple.opacity(0.3)
+                            .ignoresSafeArea()
+                        
+                        VStack {
+                            Text("第5页")
+                                .font(.title)
+                                .foregroundColor(.white)
+                            
+                            Button("返回第4页") {
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    currentPage = 4
+                                }
+                            }
+                            .padding()
+                            .background(Color.white.opacity(0.3))
+                            .cornerRadius(10)
+                        }
+                    }
+                } else if currentPage == 4 {
+                    // 第4页 - 记忆物品照片上传
+                    ZStack {
+                        Image("4")
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .clipped()
+                        
+                        // 4个照片上传区域
+                        VStack {
+                            Spacer()
+                                .frame(height: 120) // 顶部空间
+                            
+                            // 上面两个照片框
+                            HStack(spacing: 20) {
+                                Spacer()
+                                PhotoUploadArea(
+                                    photoIndex: 0,
+                                    photo: memoryPhotos[0],
+                                    isProcessing: isProcessingPhotos,
+                                    onTap: {
+                                        currentPhotoIndex = 0
+                                        showPhotoActionSheet()
+                                    }
+                                )
+                                PhotoUploadArea(
+                                    photoIndex: 1,
+                                    photo: memoryPhotos[1],
+                                    isProcessing: isProcessingPhotos,
+                                    onTap: {
+                                        currentPhotoIndex = 1
+                                        showPhotoActionSheet()
+                                    }
+                                )
+                                Spacer()
+                            }
+                            
+                            Spacer()
+                                .frame(height: 30)
+                            
+                            // 下面两个照片框
+                            HStack(spacing: 20) {
+                                Spacer()
+                                PhotoUploadArea(
+                                    photoIndex: 2,
+                                    photo: memoryPhotos[2],
+                                    isProcessing: isProcessingPhotos,
+                                    onTap: {
+                                        currentPhotoIndex = 2
+                                        showPhotoActionSheet()
+                                    }
+                                )
+                                PhotoUploadArea(
+                                    photoIndex: 3,
+                                    photo: memoryPhotos[3],
+                                    isProcessing: isProcessingPhotos,
+                                    onTap: {
+                                        currentPhotoIndex = 3
+                                        showPhotoActionSheet()
+                                    }
+                                )
+                                Spacer()
+                            }
+                            
+                            Spacer()
+                            
+                            // "就这样吧" 按钮
+                            Button(action: {
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    currentPage = 5 // 跳转到第5页
+                                }
+                            }) {
+                                Text("就这样吧")
+                                    .font(.system(size: 18, weight: .medium))
+                                    .foregroundColor(.white)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 16)
+                                    .background(Color.orange)
+                                    .cornerRadius(25)
+                            }
+                            .padding(.horizontal, 40)
+                            .padding(.bottom, 50)
+                        }
+                        
+                        // 返回按钮
+                        VStack {
+                            HStack {
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.5)) {
+                                        currentPage = 2
+                                    }
+                                }) {
+                                    Image(systemName: "chevron.left")
+                                        .font(.title2)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .background(Color.black.opacity(0.3))
+                                        .clipShape(Circle())
+                                }
+                                .padding(.leading, 20)
+                                .padding(.top, 20)
+                                
+                                Spacer()
+                            }
+                            Spacer()
+                        }
+                    }
                 }
             }
         }
         .ignoresSafeArea()
+        .actionSheet(isPresented: $showImagePicker) {
+            ActionSheet(
+                title: Text("选择照片"),
+                buttons: [
+                    .default(Text("拍照")) {
+                        showCamera = true
+                    },
+                    .default(Text("从相册选择")) {
+                        selectedItem = nil // 触发PhotosPicker
+                    },
+                    .cancel()
+                ]
+            )
+        }
+        .sheet(isPresented: $showCamera) {
+            CameraImagePicker(
+                selectedImage: $selectedImage,
+                sourceType: .camera
+            )
+        }
+        .onChange(of: selectedImage) { newImage in
+            if let image = newImage {
+                memoryPhotos[currentPhotoIndex] = image
+                processMemoryPhoto(image: image, index: currentPhotoIndex)
+                selectedImage = nil // 重置
+            }
+        }
 
+    }
+    
+    // 显示照片选择弹窗
+    func showPhotoActionSheet() {
+        showImagePicker = true
+    }
+    
+    // 处理记忆照片AI风格化
+    func processMemoryPhoto(image: UIImage, index: Int) {
+        Task {
+            await MainActor.run {
+                isProcessingPhotos = true
+            }
+            
+            // 上传照片到后端
+            guard let result = await uploadMemoryPhotoToBackend(image: image, index: index) else {
+                await MainActor.run {
+                    isProcessingPhotos = false
+                }
+                return
+            }
+            
+            // 轮询AI处理结果
+            await pollMemoryPhotoProcessing(imageId: result.imageId, index: index)
+        }
+    }
+    
+    // 上传记忆照片到后端
+    func uploadMemoryPhotoToBackend(image: UIImage, index: Int) async -> (imageId: Int, generatedImageUrl: String?)? {
+        guard let imageData = image.jpegData(compressionQuality: 0.9) else {
+            print("❌ 无法转换图片数据")
+            return nil
+        }
+        
+        guard let url = URL(string: "\(backendUrl)/upload-memory-photo") else {
+            print("❌ 无效的URL")
+            return nil
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        
+        let boundary = "Boundary-\(UUID().uuidString)"
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"memory_\(index).jpg\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: image/jpeg\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"photo_index\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(index)".data(using: .utf8)!)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        
+        do {
+            let (data, response) = try await URLSession.shared.upload(for: request, from: body)
+            
+            if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 {
+                if let jsonResponse = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    print("✅ 记忆照片上传成功: \(jsonResponse)")
+                    
+                    if let imageId = jsonResponse["image_id"] as? Int {
+                        let generatedImageUrl = jsonResponse["generated_image_url"] as? String
+                        return (imageId: imageId, generatedImageUrl: generatedImageUrl)
+                    }
+                }
+            }
+        } catch {
+            print("❌ 记忆照片上传失败: \(error)")
+        }
+        
+        return nil
+    }
+    
+    // 轮询记忆照片处理状态
+    func pollMemoryPhotoProcessing(imageId: Int, index: Int) async {
+        let maxAttempts = 60
+        var attempts = 0
+        
+        while attempts < maxAttempts {
+            attempts += 1
+            
+            if let status = await checkImageStatus(imageId: imageId) {
+                if status.status == "completed" && status.hasGeneratedImage {
+                    if let generatedImageUrl = status.generatedImageUrl {
+                        await loadProcessedMemoryPhoto(from: generatedImageUrl, index: index)
+                        return
+                    }
+                } else if status.status == "failed" {
+                    await MainActor.run {
+                        isProcessingPhotos = false
+                    }
+                    return
+                }
+            }
+            
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+        }
+        
+        await MainActor.run {
+            isProcessingPhotos = false
+        }
+    }
+    
+    // 加载处理后的记忆照片
+    func loadProcessedMemoryPhoto(from urlString: String, index: Int) async {
+        guard let url = URL(string: urlString) else { return }
+        
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            
+            if let image = UIImage(data: data) {
+                await MainActor.run {
+                    processedPhotos[index] = image
+                    isProcessingPhotos = false
+                }
+                print("✅ 成功加载处理后的记忆照片 \(index)")
+            }
+        } catch {
+            await MainActor.run {
+                isProcessingPhotos = false
+            }
+            print("❌ 加载处理后的记忆照片失败: \(error)")
+        }
     }
     // 处理图片上传和AI生成
     func processImage(image: UIImage) async {
@@ -334,12 +702,13 @@ struct ContentView: View {
             let (data, _) = try await URLSession.shared.data(from: url)
             
             if let image = UIImage(data: data) {
-                await MainActor.run {
-                    generatedImage = image
-                    uploadStatus = "纪念照生成完成！"
-                    isGenerating = false
-                    stopWaitingMessageTimer()
-                }
+                        await MainActor.run {
+            generatedImage = image
+            uploadStatus = "纪念照生成完成！"
+            isGenerating = false
+            showNextArrow = false // 重置箭头状态，等待3秒后再显示
+            stopWaitingMessageTimer()
+        }
                 print("✅ 成功加载生成的图片")
             }
         } catch {
@@ -379,6 +748,62 @@ struct ContentView: View {
         timer?.invalidate()
         timer = nil
         currentWaitingMessageIndex = 0
+    }
+}
+
+// 照片上传区域组件
+struct PhotoUploadArea: View {
+    let photoIndex: Int
+    let photo: UIImage?
+    let isProcessing: Bool
+    let onTap: () -> Void
+    
+    var body: some View {
+        ZStack {
+            // 虚线框
+            Rectangle()
+                .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [5]))
+                .foregroundColor(.gray.opacity(0.5))
+                .frame(width: 120, height: 120)
+                .background(Color.white.opacity(0.8))
+            
+            if let photo = photo {
+                // 显示选择的照片
+                Image(uiImage: photo)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 115, height: 115)
+                    .clipped()
+            } else {
+                // 显示上传图标
+                VStack(spacing: 8) {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.brown.opacity(0.7))
+                    
+                    Text("上传照片")
+                        .font(.system(size: 12))
+                        .foregroundColor(.brown.opacity(0.7))
+                }
+            }
+            
+            // 处理中的加载指示器
+            if isProcessing {
+                ZStack {
+                    Color.black.opacity(0.6)
+                        .frame(width: 120, height: 120)
+                    
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(1.2)
+                }
+            }
+        }
+        .onTapGesture {
+            if !isProcessing {
+                onTap()
+            }
+        }
     }
 }
 

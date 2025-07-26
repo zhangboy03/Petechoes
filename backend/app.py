@@ -152,6 +152,7 @@ def home():
             '/health - 健康检查',
             '/upload - 图片上传',
             '/upload-studio-background - 上传照相馆背景图片',
+            '/upload-memory-photo - 上传记忆照片',
             '/studio-background - 获取照相馆背景图片',
             '/status/<id> - 查询状态',
             '/image/<id> - 获取图片',
@@ -340,6 +341,176 @@ def upload_studio_background():
     except Exception as e:
         logger.error(f"❌ 背景图片上传失败: {e}")
         return jsonify({'error': f'背景图片上传失败: {str(e)}'}), 500
+
+@app.route('/upload-memory-photo', methods=['POST'])
+def upload_memory_photo():
+    """上传记忆照片并进行AI风格化处理"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': '没有找到图片文件'}), 400
+        
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'error': '没有选择文件'}), 400
+        
+        photo_index = request.form.get('photo_index', '0')
+        
+        # 读取图片数据
+        image_data = file.read()
+        logger.info(f"📸 收到记忆照片上传，索引: {photo_index}，大小: {len(image_data)} bytes")
+        
+        # 保存到数据库
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': '数据库连接失败'}), 500
+        
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO images (original_image, status) VALUES (%s, %s) RETURNING id",
+            (image_data, 'processing')
+        )
+        image_id = cursor.fetchone()[0]
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        logger.info(f"✅ 记忆照片保存成功，ID: {image_id}")
+        
+        # 在后台线程中进行AI风格化处理
+        threading.Thread(target=stylize_memory_photo, args=(image_id, int(photo_index))).start()
+        
+        return jsonify({
+            'success': True,
+            'image_id': image_id,
+            'message': '记忆照片上传成功，正在进行风格化处理...'
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ 记忆照片上传失败: {e}")
+        return jsonify({'error': f'记忆照片上传失败: {str(e)}'}), 500
+
+def stylize_memory_photo(image_id, photo_index):
+    """对记忆照片进行AI风格化处理"""
+    try:
+        logger.info(f"🎨 开始风格化记忆照片 {image_id} (索引: {photo_index})")
+        
+        # 构建用户图片的公开URL
+        base_url = os.getenv('PUBLIC_URL', 'https://petecho.zeabur.app')
+        user_image_url = f"{base_url}/image/{image_id}?type=original"
+        
+        logger.info(f"✅ 构建记忆照片URL: {user_image_url}")
+        
+        # 记忆照片风格化提示词
+        prompt = """Transform this photo into a warm, anime-style illustration with the same cozy atmosphere as a pet photography studio.
+
+Requirements:
+- Convert to soft anime/cartoon art style
+- Maintain warm golden lighting and gentle atmosphere
+- Keep all objects and details recognizable but stylized
+- Use soft pastels and warm colors
+- Create a heartwarming, memorial-like mood
+- Style should match pet photography studio ambiance
+- Output format: suitable for mobile app display
+
+将这张照片转换成温馨的动漫风格插画，保持与宠物照相馆相同的舒适氛围。
+使用柔和的动漫风格，温暖的色调，营造治愈系的纪念氛围。"""
+
+        # 调用BFL API进行风格化
+        headers = {
+            'x-key': BFL_API_KEY,
+            'Content-Type': 'application/json'
+        }
+        
+        payload = {
+            'prompt': prompt,
+            'input_image': user_image_url,
+            'seed': 42,
+            'aspect_ratio': '1:1',  # 记忆照片使用1:1比例
+            'output_format': 'jpeg',
+            'prompt_upsampling': False,
+            'safety_tolerance': 2
+        }
+        
+        logger.info(f"🎨 调用BFL API风格化记忆照片...")
+        logger.info(f"📋 记忆照片索引: {photo_index}")
+        
+        response = requests.post(BFL_API_URL, json=payload, headers=headers, timeout=60)
+        logger.info(f"📡 BFL API响应: {response.status_code}")
+        
+        if response.status_code == 200:
+            result = response.json()
+            logger.info(f"✅ 记忆照片风格化任务提交成功")
+            
+            if 'id' in result:
+                # 轮询结果
+                polling_url = result.get('polling_url')
+                if polling_url:
+                    poll_memory_photo_result(image_id, polling_url, photo_index)
+                else:
+                    logger.error(f"❌ 未获得轮询URL")
+                    update_image_status(image_id, 'failed')
+            else:
+                logger.error(f"❌ 未获得任务ID")
+                update_image_status(image_id, 'failed')
+        else:
+            logger.error(f"❌ BFL API调用失败: {response.status_code}")
+            update_image_status(image_id, 'failed')
+            
+    except Exception as e:
+        logger.error(f"❌ 记忆照片风格化异常: {e}")
+        update_image_status(image_id, 'failed')
+
+def poll_memory_photo_result(image_id, polling_url, photo_index):
+    """轮询记忆照片处理结果"""
+    max_attempts = 60
+    attempts = 0
+    
+    while attempts < max_attempts:
+        attempts += 1
+        
+        try:
+            response = requests.get(polling_url, timeout=10)
+            
+            if response.status_code == 200:
+                result = response.json()
+                status = result.get('status', 'unknown')
+                
+                logger.info(f"📊 记忆照片 {photo_index} 状态检查 {attempts}: {status}")
+                
+                if status == 'Ready' and 'sample' in result:
+                    generated_image_url = result['sample']
+                    logger.info(f"✅ 记忆照片 {photo_index} 风格化完成: {generated_image_url}")
+                    
+                    # 下载并保存风格化后的图片
+                    img_response = requests.get(generated_image_url)
+                    if img_response.status_code == 200:
+                        conn = get_db_connection()
+                        if conn:
+                            cursor = conn.cursor()
+                            cursor.execute(
+                                "UPDATE images SET generated_image = %s, status = %s WHERE id = %s",
+                                (img_response.content, 'completed', image_id)
+                            )
+                            conn.commit()
+                            cursor.close()
+                            conn.close()
+                            logger.info(f"✅ 记忆照片 {photo_index} 风格化完成并保存")
+                            return
+                    
+                elif status == 'failed':
+                    logger.error(f"❌ 记忆照片 {photo_index} 风格化失败")
+                    update_image_status(image_id, 'failed')
+                    return
+                    
+            time.sleep(5)
+            
+        except Exception as e:
+            logger.error(f"❌ 轮询记忆照片 {photo_index} 失败: {e}")
+            time.sleep(5)
+    
+    # 超时
+    logger.error(f"⏰ 记忆照片 {photo_index} 风格化超时")
+    update_image_status(image_id, 'failed')
 
 def generate_new_image(image_id):
     """使用Black Forest Lab生成新图片"""
