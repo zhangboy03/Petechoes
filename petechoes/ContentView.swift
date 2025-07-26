@@ -48,7 +48,7 @@ struct ContentView: View {
                         .gesture(
                             DragGesture()
                                 .onEnded { value in
-                                    if value.translation.x < -50 {
+                                    if value.translation.width < -50 {
                                         withAnimation(.easeInOut(duration: 0.5)) {
                                             currentPage = 2
                                         }
