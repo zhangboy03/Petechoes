@@ -365,10 +365,16 @@ def poll_bfl_result(image_id, task_id, polling_url):
                 
                 response = requests.get(polling_url, headers=headers, timeout=30)
                 logger.info(f"📡 轮询响应状态码: {response.status_code}")
-                logger.info(f"📡 轮询响应内容: {response.text[:500]}...")
                 
                 if response.status_code == 200:
                     result = response.json()
+                    
+                    # 显示完整的BFL图片URL（如果存在）
+                    if 'result' in result and 'sample' in result['result']:
+                        bfl_image_url = result['result']['sample']
+                        logger.info(f"🖼️ BFL完整图片URL: {bfl_image_url}")
+                    
+                    logger.info(f"📡 轮询响应摘要: 状态={result.get('status', 'unknown')}, 包含结果={bool(result.get('result'))}")
                     
                     # 检查任务状态
                     if 'status' in result:
@@ -395,7 +401,13 @@ def poll_bfl_result(image_id, task_id, polling_url):
                                         conn.commit()
                                         cursor.close()
                                         conn.close()
+                                        
+                                        # 显示我们的简短URL
+                                        base_url = os.getenv('PUBLIC_URL', 'https://petecho.zeabur.app')
+                                        our_image_url = f"{base_url}/image/{image_id}?type=generated"
                                         logger.info(f"✅ 图片 {image_id} 生成成功")
+                                        logger.info(f"🔗 简短访问URL: {our_image_url}")
+                                        logger.info(f"📱 iOS应用将使用此URL显示生成的图片")
                                         return  # 成功完成，退出轮询
                                     else:
                                         logger.error(f"❌ 数据库连接失败，无法保存生成的图片")
@@ -439,7 +451,13 @@ def poll_bfl_result(image_id, task_id, polling_url):
                                     conn.commit()
                                     cursor.close()
                                     conn.close()
+                                    
+                                    # 显示我们的简短URL
+                                    base_url = os.getenv('PUBLIC_URL', 'https://petecho.zeabur.app')
+                                    our_image_url = f"{base_url}/image/{image_id}?type=generated"
                                     logger.info(f"✅ 图片 {image_id} 生成成功")
+                                    logger.info(f"🔗 简短访问URL: {our_image_url}")
+                                    logger.info(f"📱 iOS应用将使用此URL显示生成的图片")
                                     return  # 成功完成，退出轮询
                                 else:
                                     logger.error(f"❌ 数据库连接失败，无法保存生成的图片")
@@ -458,6 +476,7 @@ def poll_bfl_result(image_id, task_id, polling_url):
                     return
                 else:
                     logger.warning(f"⚠️ 轮询响应异常: {response.status_code}")
+                    logger.info(f"📡 错误响应内容: {response.text[:200]}...")
                     
             except Exception as e:
                 logger.warning(f"⚠️ 轮询请求异常: {e}")
