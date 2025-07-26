@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		165629D22E35829F00BB3720 /* bgm.MP3 in Resources */ = {isa = PBXBuildFile; fileRef = 165629D12E35829F00BB3720 /* bgm.MP3 */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		165629872E33CA8E00BB3720 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +31,7 @@
 		165629792E33CA8D00BB3720 /* petechoes.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = petechoes.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		165629862E33CA8E00BB3720 /* petechoesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = petechoesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		165629902E33CA8E00BB3720 /* petechoesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = petechoesUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		165629D12E35829F00BB3720 /* bgm.MP3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = bgm.MP3; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -76,6 +81,7 @@
 			isa = PBXGroup;
 			children = (
 				1656297B2E33CA8D00BB3720 /* petechoes */,
+				165629D12E35829F00BB3720 /* bgm.MP3 */,
 				165629892E33CA8E00BB3720 /* petechoesTests */,
 				165629932E33CA8E00BB3720 /* petechoesUITests */,
 				1656297A2E33CA8D00BB3720 /* Products */,
@@ -212,6 +218,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				165629D22E35829F00BB3720 /* bgm.MP3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

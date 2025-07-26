@@ -12,6 +12,10 @@ struct petechoesApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    // APP启动时开始播放背景音乐
+                    AudioManager.shared.startBackgroundMusic()
+                }
         }
     }
 }
