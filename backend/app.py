@@ -148,19 +148,20 @@ def test_modelscope_api():
     try:
         logger.info("🧪 测试ModelScope API...")
         
-        # 使用示例图片测试API
+        # 使用示例图片测试API  
         headers = {
-            'Authorization': f'Bearer {MODELSCOPE_API_KEY}',
+            'Authorization': 'Bearer ms-6ab8bbf1-8fbd-4859-9a93-742f4edc5da8',
             'Content-Type': 'application/json'
         }
         
         payload = {
             'model': 'black-forest-labs/FLUX.1-Kontext-dev',
-            'prompt': 'Change the girl\'s hair to blue color',
+            'prompt': '把女孩的头发变成蓝色',
             'image_url': "https://resources.modelscope.cn/aigc/image_edit.png"
         }
         
         logger.info(f"🧪 测试payload: {payload}")
+        logger.info(f"🧪 API Key: ms-6ab8bbf...")
         
         import json
         response = requests.post(
@@ -249,21 +250,21 @@ def generate_new_image(image_id):
         image_url = f"{base_url}/image/{image_id}?type=original"
         logger.info(f"✅ 构建图片URL: {image_url}")
         
-        # 调用ModelScope API（使用正确的格式）
+        # 调用ModelScope API（完全按照官方示例）
         headers = {
-            'Authorization': f'Bearer {MODELSCOPE_API_KEY}',
+            'Authorization': 'Bearer ms-6ab8bbf1-8fbd-4859-9a93-742f4edc5da8',
             'Content-Type': 'application/json'
         }
         
         payload = {
             'model': 'black-forest-labs/FLUX.1-Kontext-dev',
-            'prompt': 'Transform the pet in the image to create a warm memorial photo with the pet sitting on a chair, waiting to be photographed. Warm tones, cozy atmosphere, suitable for mobile app background.',
+            'prompt': '根据用户上传的宠物图片，生成宠物坐在椅子上等待被拍照的图片，温馨的宠物纪念风格，温暖的色调，适合作为手机应用背景',
             'image_url': image_url
         }
         
         logger.info(f"🔄 调用ModelScope API...")
         logger.info(f"🌐 API URL: {MODELSCOPE_API_URL}")
-        logger.info(f"🔑 API Key: {MODELSCOPE_API_KEY[:10]}...")
+        logger.info(f"🔑 API Key: ms-6ab8bbf...")
         logger.info(f"📋 Payload: {payload}")
         
         # 首先测试我们的图片URL是否可以访问
