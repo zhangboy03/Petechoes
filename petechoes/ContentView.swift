@@ -25,6 +25,16 @@ struct ContentView: View {
                 Page5View(appState: appState)
             case 6:
                 Page6View(appState: appState)
+            case 7:
+                Page7View(appState: appState)
+            case 8:
+                Page8View(appState: appState)
+            case 9:
+                Page9View(appState: appState)
+            case 10:
+                Page10View(appState: appState)
+            case 11:
+                Page11View(appState: appState)
             default:
                 Page1View(appState: appState)
             }

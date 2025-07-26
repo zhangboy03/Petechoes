@@ -6,16 +6,25 @@ struct Page6View: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                // 背景色
-                Color.init(red: 0.96, green: 0.87, blue: 0.70) // 温馨的米色背景
-                    .ignoresSafeArea()
-                
-                // 圆形星球图片 - 向下移动到底部中心
                 Image("6")
                     .resizable()
-                    .aspectRatio(contentMode: .fit) // 保持图片完整性
-                    .frame(width: geometry.size.width * 1.2, height: geometry.size.width * 1.2) // 稍微放大
-                    .offset(y: geometry.size.height * 0.35) // 向下移动，使圆心在屏幕底部中心
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipped()
+                
+                // 建筑物点击区域 - 上方中央
+                VStack {
+                    Button(action: {
+                        appState.navigateToPage(7)
+                    }) {
+                        Rectangle()
+                            .fill(Color.clear)
+                            .frame(width: geometry.size.width * 0.4, height: geometry.size.height * 0.3)
+                    }
+                    .padding(.top, geometry.size.height * 0.1)
+                    
+                    Spacer()
+                }
                 
                 // 返回按钮（可选）
                 VStack {
@@ -38,6 +47,18 @@ struct Page6View: View {
                     Spacer()
                 }
             }
+            .gesture(
+                DragGesture()
+                    .onEnded { value in
+                        if value.translation.width > 100 {
+                            // 向右滑动，跳转到图片8
+                            appState.navigateToPage(8)
+                        } else if value.translation.width < -100 {
+                            // 向左滑动，跳转到图片9
+                            appState.navigateToPage(9)
+                        }
+                    }
+            )
         }
     }
 } 
