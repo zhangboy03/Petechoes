@@ -10,10 +10,10 @@ load_dotenv()
 # Zeabur会自动设置这些环境变量
 DB_CONFIG = {
     'host': os.getenv('POSTGRES_HOST', 'hkg1.clusters.zeabur.com'),
-    'port': int(os.getenv('POSTGRES_PORT', '30206')),  # 转换为整数
+    'port': int(os.getenv('POSTGRES_PORT', '30177')),  # 更新为新端口
     'database': os.getenv('POSTGRES_DATABASE', os.getenv('POSTGRES_DB', 'zeabur')),
     'user': os.getenv('POSTGRES_USERNAME', os.getenv('POSTGRES_USER', 'root')),
-    'password': os.getenv('POSTGRES_PASSWORD', os.getenv('PASSWORD', ''))
+    'password': os.getenv('POSTGRES_PASSWORD', os.getenv('PASSWORD', 'laKs69d7AVXmTJ5H1wLGBrIqv0h43k28'))
 }
 
 # ModelScope API配置
