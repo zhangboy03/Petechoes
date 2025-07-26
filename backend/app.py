@@ -103,7 +103,8 @@ def home():
             '/upload - 图片上传',
             '/status/<id> - 查询状态',
             '/image/<id> - 获取图片',
-            '/test - 测试接口'
+            '/test - 测试接口',
+            '/test-api - 测试ModelScope API'
         ]
     })
 
@@ -140,6 +141,58 @@ def test():
             'password_set': bool(DB_CONFIG['password'])
         }
     })
+
+@app.route('/test-api', methods=['GET'])
+def test_modelscope_api():
+    """测试ModelScope API"""
+    try:
+        logger.info("🧪 测试ModelScope API...")
+        
+        # 使用示例图片测试API
+        headers = {
+            'Authorization': f'Bearer {MODELSCOPE_API_KEY}',
+            'Content-Type': 'application/json'
+        }
+        
+        payload = {
+            'model': 'black-forest-labs/FLUX.1-Kontext-dev',
+            'prompt': 'Change the girl\'s hair to blue color',
+            'image_url': "https://resources.modelscope.cn/aigc/image_edit.png"
+        }
+        
+        logger.info(f"🧪 测试payload: {payload}")
+        
+        import json
+        response = requests.post(
+            MODELSCOPE_API_URL, 
+            data=json.dumps(payload, ensure_ascii=False).encode('utf-8'), 
+            headers=headers,
+            timeout=60
+        )
+        
+        logger.info(f"🧪 API测试响应: {response.status_code}")
+        logger.info(f"🧪 API测试内容: {response.text}")
+        
+        if response.status_code == 200:
+            return jsonify({
+                'success': True,
+                'message': 'ModelScope API测试成功',
+                'response': response.json()
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'ModelScope API测试失败',
+                'status_code': response.status_code,
+                'response': response.text
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"🧪 API测试异常: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'API测试异常: {str(e)}'
+        }), 500
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
@@ -204,20 +257,29 @@ def generate_new_image(image_id):
         
         payload = {
             'model': 'black-forest-labs/FLUX.1-Kontext-dev',
-            'prompt': '根据用户上传的宠物图片，生成宠物坐在椅子上等待被拍照的图片，温馨的宠物纪念风格，温暖的色调，适合作为手机应用背景',
+            'prompt': 'Transform the pet in the image to create a warm memorial photo with the pet sitting on a chair, waiting to be photographed. Warm tones, cozy atmosphere, suitable for mobile app background.',
             'image_url': image_url
         }
         
         logger.info(f"🔄 调用ModelScope API...")
         logger.info(f"🌐 API URL: {MODELSCOPE_API_URL}")
         logger.info(f"🔑 API Key: {MODELSCOPE_API_KEY[:10]}...")
+        logger.info(f"📋 Payload: {payload}")
+        
+        # 首先测试我们的图片URL是否可以访问
+        try:
+            test_response = requests.head(image_url, timeout=10)
+            logger.info(f"🔍 图片URL测试: {test_response.status_code}, Content-Type: {test_response.headers.get('content-type', 'unknown')}")
+        except Exception as e:
+            logger.warning(f"⚠️ 图片URL测试失败: {e}")
         
         # 使用正确的请求格式
         import json
         response = requests.post(
             MODELSCOPE_API_URL, 
             data=json.dumps(payload, ensure_ascii=False).encode('utf-8'), 
-            headers=headers
+            headers=headers,
+            timeout=60
         )
         
         logger.info(f"📡 API响应状态码: {response.status_code}")
