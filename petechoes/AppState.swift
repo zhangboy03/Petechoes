@@ -21,6 +21,12 @@ class AppState: ObservableObject {
     @Published var memoryPhotos: [UIImage?] = [nil, nil, nil, nil]
     @Published var isProcessingPhotos = false
     
+    // 第5页信件相关
+    @Published var letterText = ""
+    @Published var showKeyboard = false
+    @Published var isRecording = false
+    @Published var letterSent = false
+    
     // 导航方法
     func navigateToPage(_ page: Int) {
         withAnimation(.easeInOut(duration: 0.5)) {
