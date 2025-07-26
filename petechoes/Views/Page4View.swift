@@ -53,11 +53,11 @@ struct Page4View: View {
                             )
                         }
                         .padding(.trailing, geometry.size.width * 0.08)
-                        .padding(.bottom, geometry.size.height * 0.18)
+                        .padding(.bottom, geometry.size.height * 0.32) // 增加底部间距，避免与按钮重叠
                     }
                 }
                 
-                // 透明的"就这样吧"按钮区域
+                // 透明的"就这样吧"按钮区域 - 移到最底部
                 VStack {
                     Spacer()
                     
@@ -66,10 +66,9 @@ struct Page4View: View {
                     }) {
                         Rectangle()
                             .fill(Color.clear)
-                            .frame(height: 60)
+                            .frame(width: geometry.size.width * 0.8, height: 80) // 增加按钮高度和宽度
                     }
-                    .padding(.horizontal, 40)
-                    .padding(.bottom, 50)
+                    .padding(.bottom, 30) // 减少底部间距
                 }
                 
                 // 返回按钮
