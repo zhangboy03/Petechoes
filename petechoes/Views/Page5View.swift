@@ -12,35 +12,35 @@ struct Page5View: View {
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     .clipped()
                 
-                // 信纸内的文本输入框 - 向右向上调整位置
+                // 信纸内的文本输入框 - 大幅缩小，只占信纸上半部分
                 VStack {
                     Spacer()
-                        .frame(height: geometry.size.height * 0.25) // 向上移动（从0.3减少到0.25）
+                        .frame(height: geometry.size.height * 0.22) // 继续向上移动
                     
                     HStack {
                         Spacer()
-                            .frame(width: geometry.size.width * 0.05) // 向右移动
+                            .frame(width: geometry.size.width * 0.08) // 继续向右移动
                         
-                        // 文本输入区域 - 在信纸范围内
+                        // 文本输入区域 - 大幅缩小范围，避免覆盖发送按钮
                         ZStack(alignment: .topLeading) {
                             Rectangle()
-                                .fill(Color.clear)
-                                .frame(width: geometry.size.width * 0.75, height: geometry.size.height * 0.4)
+                                .fill(Color.blue.opacity(0.2)) // 临时显示文本框区域，方便调试
+                                .frame(width: geometry.size.width * 0.7, height: geometry.size.height * 0.25) // 大幅缩小高度
                             
                             if appState.letterText.isEmpty {
                                 Text("说说你最与它之间最难忘的故事吧")
                                     .foregroundColor(.brown.opacity(0.5))
                                     .font(.system(size: 16))
-                                    .padding(.horizontal, 20)
-                                    .padding(.top, 20)
+                                    .padding(.horizontal, 15)
+                                    .padding(.top, 15)
                             }
                             
                             TextEditor(text: $appState.letterText)
                                 .font(.system(size: 16))
                                 .foregroundColor(.brown)
                                 .background(Color.clear)
-                                .padding(.horizontal, 15)
-                                .padding(.top, 15)
+                                .padding(.horizontal, 12)
+                                .padding(.top, 12)
                                 .scrollContentBackground(.hidden)
                         }
                         
@@ -86,20 +86,21 @@ struct Page5View: View {
                     .padding(.bottom, geometry.size.height * 0.08)
                 }
                 
-                // 发送按钮 - 在信纸的发送区域，位置调整
+                // 发送按钮 - 在信纸的发送区域，确保不被文本框覆盖
                 VStack {
                     Spacer()
-                        .frame(height: geometry.size.height * 0.72) // 稍微向上调整
+                        .frame(height: geometry.size.height * 0.68) // 进一步向上调整，避免与文本框重叠
                     
                     HStack {
                         Spacer()
                         
                         Button(action: {
+                            print("发送按钮被点击") // 调试用
                             sendLetter()
                         }) {
                             Rectangle()
-                                .fill(Color.clear)
-                                .frame(width: 150, height: 50) // 增大点击区域
+                                .fill(Color.red.opacity(0.3)) // 临时显示按钮区域，方便调试
+                                .frame(width: 180, height: 60) // 进一步增大点击区域
                         }
                         
                         Spacer()
