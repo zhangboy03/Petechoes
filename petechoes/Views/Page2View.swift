@@ -51,6 +51,25 @@ struct Page2View: View {
                     }
                 }
                 
+                // 加载指示器 - 恢复原来的缓冲动画
+                if appState.isGenerating {
+                    ZStack {
+                        Color.black.opacity(0.7)
+                            .ignoresSafeArea()
+                        
+                        VStack(spacing: 20) {
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                .scaleEffect(1.5)
+                            
+                            Text(appState.uploadStatus)
+                                .foregroundColor(.white)
+                                .font(.system(size: 18, weight: .medium))
+                                .multilineTextAlignment(.center)
+                        }
+                    }
+                }
+                
                 // 显示生成的图片
                 if let generatedImage = appState.generatedImage {
                     Image(uiImage: generatedImage)

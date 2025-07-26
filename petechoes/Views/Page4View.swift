@@ -33,7 +33,7 @@ struct Page4View: View {
                         
                         Spacer()
                     }
-                    .padding(.leading, geometry.size.width * 0.08)
+                    .padding(.leading, geometry.size.width * 0.05)
                     
                     Spacer()
                     
