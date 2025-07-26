@@ -1,0 +1,12 @@
+{
+  "name": "petechoes-backend",
+  "build": {
+    "commands": [
+      "pip install -r requirements.txt"
+    ]
+  },
+  "start": "python start_server.py",
+  "environment": {
+    "PYTHON_VERSION": "3.11"
+  }
+}
