@@ -23,7 +23,7 @@ app = Flask(__name__)
 CORS(app)
 
 # ModelScope API配置
-MODELSCOPE_API_URL = 'https://api.modelscope.cn/v1/models/black-forest-labs/FLUX.1-Kontext-dev/inference'
+MODELSCOPE_API_URL = 'https://api-inference.modelscope.cn/v1/images/generations'
 
 # 数据库配置
 DB_CONFIG = {
@@ -34,7 +34,7 @@ DB_CONFIG = {
     'password': os.getenv('POSTGRES_PASSWORD', os.getenv('PASSWORD', 'laKs69d7AVXmTJ5H1wLGBrIqv0h43k28'))
 }
 
-MODELSCOPE_API_KEY = os.getenv('MODELSCOPE_API_KEY')
+MODELSCOPE_API_KEY = os.getenv('MODELSCOPE_API_KEY', 'ms-6ab8bbf1-8fbd-4859-9a93-742f4edc5da8')
 
 print("🚀 Petechoes完整应用启动中...")
 print(f"🔧 数据库配置: {DB_CONFIG['host']}:{DB_CONFIG['port']}")
@@ -196,7 +196,7 @@ def generate_new_image(image_id):
         image_url = f"{base_url}/image/{image_id}?type=original"
         logger.info(f"✅ 构建图片URL: {image_url}")
         
-        # 调用ModelScope API
+        # 调用ModelScope API（使用正确的格式）
         headers = {
             'Authorization': f'Bearer {MODELSCOPE_API_KEY}',
             'Content-Type': 'application/json'
@@ -209,15 +209,29 @@ def generate_new_image(image_id):
         }
         
         logger.info(f"🔄 调用ModelScope API...")
-        response = requests.post(MODELSCOPE_API_URL, json=payload, headers=headers)
+        logger.info(f"🌐 API URL: {MODELSCOPE_API_URL}")
+        logger.info(f"🔑 API Key: {MODELSCOPE_API_KEY[:10]}...")
+        
+        # 使用正确的请求格式
+        import json
+        response = requests.post(
+            MODELSCOPE_API_URL, 
+            data=json.dumps(payload, ensure_ascii=False).encode('utf-8'), 
+            headers=headers
+        )
         
         logger.info(f"📡 API响应状态码: {response.status_code}")
+        logger.info(f"📡 API响应内容: {response.text[:500]}...")
         
         if response.status_code == 200:
             result = response.json()
-            generated_image_url = result.get('output', {}).get('generated_image_url')
+            logger.info(f"🔍 API返回结构: {list(result.keys())}")
             
-            if generated_image_url:
+            # 使用正确的响应格式
+            if 'images' in result and len(result['images']) > 0:
+                generated_image_url = result['images'][0]['url']
+                logger.info(f"✅ 获得生成图片URL: {generated_image_url}")
+                
                 # 下载生成的图片
                 img_response = requests.get(generated_image_url)
                 if img_response.status_code == 200:
@@ -239,10 +253,10 @@ def generate_new_image(image_id):
                     logger.error(f"❌ 下载生成图片失败: {img_response.status_code}")
                     update_image_status(image_id, 'failed')
             else:
-                logger.error(f"❌ 未收到生成图片URL")
+                logger.error(f"❌ API响应中未找到images字段")
                 update_image_status(image_id, 'failed')
         else:
-            logger.error(f"❌ ModelScope API调用失败: {response.status_code}")
+            logger.error(f"❌ ModelScope API调用失败: {response.status_code}, 响应: {response.text}")
             update_image_status(image_id, 'failed')
             
     except Exception as e:
