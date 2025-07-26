@@ -70,6 +70,8 @@ def init_database():
             return False
             
         cursor = conn.cursor()
+        
+        # 创建图片表
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS images (
                 id SERIAL PRIMARY KEY,
@@ -80,6 +82,25 @@ def init_database():
             )
         ''')
         
+        # 创建照相馆背景图片表
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS studio_backgrounds (
+                id SERIAL PRIMARY KEY,
+                image_data BYTEA NOT NULL,
+                is_active BOOLEAN DEFAULT true,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        
+        # 检查是否已有背景图片
+        cursor.execute("SELECT COUNT(*) FROM studio_backgrounds WHERE is_active = true")
+        count = cursor.fetchone()[0]
+        
+        if count == 0:
+            # 如果没有背景图片，插入默认的图片2（需要从项目中读取）
+            logger.info("📸 正在初始化照相馆背景图片...")
+            init_studio_background(cursor)
+        
         conn.commit()
         cursor.close()
         conn.close()
@@ -89,6 +110,35 @@ def init_database():
     except Exception as e:
         logger.error(f"❌ 数据库初始化失败: {e}")
         return False
+
+def init_studio_background(cursor):
+    """初始化照相馆背景图片"""
+    try:
+        # 这里需要读取项目中的图片2并插入数据库
+        # 由于这是后端代码，我们需要从iOS项目的Assets中获取图片
+        # 暂时先插入一个占位符，实际部署时需要手动上传图片2
+        
+        # 创建一个小的占位图片
+        from PIL import Image as PILImage
+        import io
+        
+        # 创建一个402x874的占位图片
+        placeholder = PILImage.new('RGB', (402, 874), color='#F5DEB3')  # 浅黄色背景
+        
+        # 将图片转换为字节
+        img_byte_arr = io.BytesIO()
+        placeholder.save(img_byte_arr, format='JPEG', quality=90)
+        img_byte_arr = img_byte_arr.getvalue()
+        
+        cursor.execute(
+            "INSERT INTO studio_backgrounds (image_data, is_active) VALUES (%s, %s)",
+            (img_byte_arr, True)
+        )
+        
+        logger.info("📸 已插入占位符背景图片，请通过管理接口上传实际的图片2")
+        
+    except Exception as e:
+        logger.error(f"❌ 初始化背景图片失败: {e}")
 
 @app.route('/', methods=['GET'])
 def home():
@@ -101,6 +151,8 @@ def home():
         'endpoints': [
             '/health - 健康检查',
             '/upload - 图片上传',
+            '/upload-studio-background - 上传照相馆背景图片',
+            '/studio-background - 获取照相馆背景图片',
             '/status/<id> - 查询状态',
             '/image/<id> - 获取图片',
             '/test - 测试接口',
@@ -243,15 +295,67 @@ def upload_image():
         logger.error(f"❌ 上传失败: {e}")
         return jsonify({'error': f'上传失败: {str(e)}'}), 500
 
+@app.route('/upload-studio-background', methods=['POST'])
+def upload_studio_background():
+    """上传照相馆背景图片（管理员接口）"""
+    try:
+        if 'image' not in request.files:
+            return jsonify({'error': '没有找到图片文件'}), 400
+        
+        file = request.files['image']
+        if file.filename == '':
+            return jsonify({'error': '没有选择文件'}), 400
+        
+        # 读取图片数据
+        image_data = file.read()
+        logger.info(f"🖼️ 收到照相馆背景图片上传，大小: {len(image_data)} bytes")
+        
+        # 保存到数据库
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': '数据库连接失败'}), 500
+        
+        cursor = conn.cursor()
+        
+        # 先将所有背景图片设为非活跃状态
+        cursor.execute("UPDATE studio_backgrounds SET is_active = false")
+        
+        # 插入新的背景图片
+        cursor.execute(
+            "INSERT INTO studio_backgrounds (image_data, is_active) VALUES (%s, %s)",
+            (image_data, True)
+        )
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        logger.info(f"✅ 照相馆背景图片上传成功")
+        
+        return jsonify({
+            'success': True,
+            'message': '照相馆背景图片上传成功'
+        })
+        
+    except Exception as e:
+        logger.error(f"❌ 背景图片上传失败: {e}")
+        return jsonify({'error': f'背景图片上传失败: {str(e)}'}), 500
+
 def generate_new_image(image_id):
     """使用Black Forest Lab生成新图片"""
     try:
         logger.info(f"🔍 开始处理图片 {image_id}")
         
-        # 构建图片的公开URL
+        # 构建用户上传图片的公开URL
         base_url = os.getenv('PUBLIC_URL', 'https://petecho.zeabur.app')
-        image_url = f"{base_url}/image/{image_id}?type=original"
-        logger.info(f"✅ 构建图片URL: {image_url}")
+        user_image_url = f"{base_url}/image/{image_id}?type=original"
+        
+        # 构建照相馆背景图片的公开URL
+        studio_background_url = f"{base_url}/studio-background"
+        
+        logger.info(f"✅ 构建用户图片URL: {user_image_url}")
+        logger.info(f"✅ 构建照相馆背景URL: {studio_background_url}")
+        logger.info(f"🎨 将在payload中同时传递两张图片")
         
         # 调用BFL API
         headers = {
@@ -259,11 +363,33 @@ def generate_new_image(image_id):
             'Content-Type': 'application/json'
         }
         
+        # 强调沿用照相馆风格的提示词
+        prompt = """Create an anime-style pet memorial photo by combining the pet from the first image with the studio setting from the second image.
+        
+        Task: Place the anime-stylized pet sitting on the wooden chair in the exact same studio environment as shown in the background image.
+        
+        Requirements:
+        - Keep the EXACT same studio layout, lighting, and atmosphere from the background image
+        - Transform the pet into cute anime/cartoon style while maintaining its original characteristics  
+        - The pet should sit calmly on the wooden chair, looking towards the camera
+        - Preserve the warm golden lighting and cozy photography studio atmosphere
+        - Maintain the camera, tripod, and all studio elements in their original positions
+        - Style: Anime illustration with soft colors and heartwarming mood
+        - Output format: 9:20 aspect ratio for mobile app background
+        
+        请将第一张图片中的宠物与第二张图片中的照相馆场景结合，创造温馨的动漫风格纪念照。
+        保持照相馆的原有风格和布局，让动漫化的宠物自然地坐在椅子上等待拍照。
+        沿用照相馆的温暖色调、灯光效果和整体氛围。"""
+        
         payload = {
-            'prompt': 'Transform this pet image into a warm memorial photo with the pet sitting on a chair, waiting to be photographed. Cozy atmosphere, warm tones, suitable for mobile app background.',
-            'input_image': image_url,
+            'prompt': prompt,
+            'input_image': user_image_url,  # 用户的宠物照片
+            'background_image': studio_background_url,  # 照相馆背景图片
+            'reference_image': studio_background_url,  # 尝试不同的字段名
+            'studio_image': studio_background_url,  # 再尝试一个字段名
+            'second_image': studio_background_url,  # 第二张图片
             'seed': 42,
-            'aspect_ratio': '1:1',
+            'aspect_ratio': '9:20',  # 接近402*874的比例，适合iPhone16Pro
             'output_format': 'jpeg',
             'prompt_upsampling': False,
             'safety_tolerance': 2
@@ -272,12 +398,19 @@ def generate_new_image(image_id):
         logger.info(f"🔄 调用BFL API...")
         logger.info(f"🌐 API URL: {BFL_API_URL}")
         logger.info(f"🔑 API Key: {BFL_API_KEY[:10]}...")
-        logger.info(f"📋 Payload: {payload}")
+        logger.info(f"🎯 尝试多图片输入:")
+        logger.info(f"   - 宠物图片: {user_image_url}")
+        logger.info(f"   - 照相馆背景: {studio_background_url}")
+        logger.info(f"📋 Payload字段: {list(payload.keys())}")
+        logger.info(f"📝 提示词长度: {len(prompt)} 字符")
         
         # 首先测试我们的图片URL是否可以访问
         try:
-            test_response = requests.head(image_url, timeout=10)
-            logger.info(f"🔍 图片URL测试: {test_response.status_code}, Content-Type: {test_response.headers.get('content-type', 'unknown')}")
+            test_response = requests.head(user_image_url, timeout=10)
+            logger.info(f"🔍 用户图片URL测试: {test_response.status_code}, Content-Type: {test_response.headers.get('content-type', 'unknown')}")
+            
+            studio_test_response = requests.head(studio_background_url, timeout=10)
+            logger.info(f"🔍 照相馆背景URL测试: {studio_test_response.status_code}, Content-Type: {studio_test_response.headers.get('content-type', 'unknown')}")
         except Exception as e:
             logger.warning(f"⚠️ 图片URL测试失败: {e}")
         
@@ -504,6 +637,34 @@ def update_image_status(image_id, status):
             conn.close()
     except Exception as e:
         logger.error(f"❌ 更新状态失败: {e}")
+
+@app.route('/studio-background', methods=['GET'])
+def get_studio_background():
+    """获取照相馆背景图片（图片2）"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'error': '数据库连接失败'}), 500
+        
+        cursor = conn.cursor()
+        # 从数据库获取照相馆背景图片
+        cursor.execute("SELECT image_data FROM studio_backgrounds WHERE is_active = true LIMIT 1")
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if not result or not result[0]:
+            # 如果数据库中没有背景图片，返回错误
+            return jsonify({'error': '照相馆背景图片不存在，请先上传'}), 404
+        
+        return send_file(
+            io.BytesIO(result[0]),
+            mimetype='image/jpeg'
+        )
+        
+    except Exception as e:
+        logger.error(f"❌ 获取照相馆背景失败: {e}")
+        return jsonify({'error': f'获取照相馆背景失败: {str(e)}'}), 500
 
 @app.route('/image/<int:image_id>', methods=['GET'])
 def get_image(image_id):

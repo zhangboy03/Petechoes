@@ -19,6 +19,9 @@ DB_CONFIG = {
 # ModelScope API配置
 MODELSCOPE_API_KEY = os.getenv('MODELSCOPE_API_KEY')
 
+# Black Forest Lab API配置
+BFL_API_KEY = os.getenv('BFL_API_KEY')
+
 def get_db_connection_with_retry(max_retries=5, retry_delay=2):
     """
     带重试逻辑的数据库连接
@@ -56,6 +59,7 @@ print(f"  Database: {DB_CONFIG['database']}")
 print(f"  User: {DB_CONFIG['user']}")
 print(f"  Password: {'***已设置***' if DB_CONFIG['password'] else '❌未设置'}")
 print(f"🔑 ModelScope API Key: {'✅已设置' if MODELSCOPE_API_KEY else '❌未设置'}")
+print(f"🔑 BFL API Key: {'✅已设置' if BFL_API_KEY else '❌未设置'}")
 
 # 启动时测试数据库连接
 print("\n🚀 启动时测试数据库连接...")

@@ -40,31 +40,28 @@ struct ContentView: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(width: geometry.size.width, height: geometry.size.height)
                         .clipped()
-                        .onTapGesture {
-                            withAnimation(.easeInOut(duration: 0.5)) {
-                                currentPage = 2
+                        .contentShape(Rectangle()) // 确保整个区域都可以点击
+                        .onTapGesture { location in
+                            print("点击位置: \(location.y), 屏幕高度: \(geometry.size.height)")
+                            // 检查点击位置是否在底部区域（屏幕高度的70%以下）
+                            if location.y > geometry.size.height * 0.7 {
+                                print("点击了房子区域，准备跳转")
+                                withAnimation(.easeInOut(duration: 0.5)) {
+                                    currentPage = 2
+                                }
                             }
                         }
-                        .gesture(
-                            DragGesture()
-                                .onEnded { value in
-                                    if value.translation.width < -50 {
-                                        withAnimation(.easeInOut(duration: 0.5)) {
-                                            currentPage = 2
-                                        }
-                                    }
-                                }
-                        )
                 } else if currentPage == 2 {
                     // 第二页
                     ZStack {
                         if let generatedImage = generatedImage {
-                            // 显示生成的图片作为背景
+                            // 显示生成的纪念照 - 保持原始比例，适配屏幕
                             Image(uiImage: generatedImage)
                                 .resizable()
-                                .aspectRatio(contentMode: .fill)
+                                .aspectRatio(contentMode: .fit)
                                 .frame(width: geometry.size.width, height: geometry.size.height)
                                 .clipped()
+                                .background(Color.black) // 添加黑色背景
                         } else {
                             // 默认第二页背景
                             Image("2")
@@ -74,49 +71,84 @@ struct ContentView: View {
                                 .clipped()
                         }
                         
-                        // 如果没有生成图片，显示图片选择器
+                        // 如果没有生成图片，整个屏幕都可以触发照片选择
                         if generatedImage == nil {
-                            VStack {
-                                Spacer()
-                                
-                                // 图片选择区域
-                                PhotosPicker(
-                                    selection: $selectedItem,
-                                    matching: .any(of: [.images, .not(.videos)]),
-                                    photoLibrary: .shared()
-                                ) {
-                                    Circle()
-                                        .strokeBorder(Color.white, lineWidth: 3, antialiased: true)
-                                        .frame(width: 150, height: 150)
-                                        .overlay(
-                                            Text(selectedImage == nil ? "点击上传宠物照片" : "已选择照片")
-                                                .foregroundColor(.white)
-                                                .font(.system(size: 16, weight: .medium))
-                                        )
-                                }
-                                .onChange(of: selectedItem) { newItem in
-                                    Task {
-                                        if let newItem = newItem {
-                                            if let data = try? await newItem.loadTransferable(type: Data.self) {
-                                                if let uiImage = UIImage(data: data) {
-                                                    selectedImage = uiImage
-                                                    await processImage(image: uiImage)
-                                                }
+                            PhotosPicker(
+                                selection: $selectedItem,
+                                matching: .images,
+                                photoLibrary: .shared()
+                            ) {
+                                Rectangle()
+                                    .fill(Color.clear)
+                                    .frame(width: geometry.size.width, height: geometry.size.height)
+                            }
+                            .onChange(of: selectedItem) { newItem in
+                                Task {
+                                    if let newItem = newItem {
+                                        if let data = try? await newItem.loadTransferable(type: Data.self) {
+                                            if let uiImage = UIImage(data: data) {
+                                                selectedImage = uiImage
+                                                await processImage(image: uiImage)
                                             }
                                         }
                                     }
                                 }
-                                
-                                if !uploadStatus.isEmpty {
+                            }
+                            
+                            // 状态显示
+                            if !uploadStatus.isEmpty {
+                                VStack {
+                                    Spacer()
                                     Text(uploadStatus)
                                         .foregroundColor(.white)
                                         .font(.system(size: 14))
                                         .multilineTextAlignment(.center)
-                                        .padding(.top, 20)
+                                        .padding(.bottom, 100)
                                 }
+                            }
+                        }
+                        
+                        // 返回按钮和功能按钮
+                        VStack {
+                            HStack {
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.5)) {
+                                        currentPage = 1
+                                    }
+                                }) {
+                                    Image(systemName: "chevron.left")
+                                        .font(.title2)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .background(Color.black.opacity(0.3))
+                                        .clipShape(Circle())
+                                }
+                                .padding(.leading, 20)
+                                .padding(.top, 20)
                                 
                                 Spacer()
+                                
+                                // 如果已生成图片，显示重新生成按钮
+                                if generatedImage != nil {
+                                    Button(action: {
+                                        // 重置状态，允许重新选择照片
+                                        generatedImage = nil
+                                        selectedImage = nil
+                                        selectedItem = nil
+                                        uploadStatus = ""
+                                    }) {
+                                        Image(systemName: "arrow.clockwise")
+                                            .font(.title2)
+                                            .foregroundColor(.white)
+                                            .padding()
+                                            .background(Color.black.opacity(0.3))
+                                            .clipShape(Circle())
+                                    }
+                                    .padding(.trailing, 20)
+                                    .padding(.top, 20)
+                                }
                             }
+                            Spacer()
                         }
                         
                         // 加载指示器
@@ -142,8 +174,8 @@ struct ContentView: View {
             }
         }
         .ignoresSafeArea()
+
     }
-    
     // 处理图片上传和AI生成
     func processImage(image: UIImage) async {
         await MainActor.run {
