@@ -12,32 +12,39 @@ struct Page5View: View {
                     .frame(width: geometry.size.width, height: geometry.size.height)
                     .clipped()
                 
-                // 信纸内的文本输入框
+                // 信纸内的文本输入框 - 向右向上调整位置
                 VStack {
                     Spacer()
-                        .frame(height: geometry.size.height * 0.3)
+                        .frame(height: geometry.size.height * 0.25) // 向上移动（从0.3减少到0.25）
                     
-                    // 文本输入区域 - 在信纸范围内
-                    ZStack(alignment: .topLeading) {
-                        Rectangle()
-                            .fill(Color.clear)
-                            .frame(width: geometry.size.width * 0.75, height: geometry.size.height * 0.4)
+                    HStack {
+                        Spacer()
+                            .frame(width: geometry.size.width * 0.05) // 向右移动
                         
-                        if appState.letterText.isEmpty {
-                            Text("说说你最与它之间最难忘的故事吧")
-                                .foregroundColor(.brown.opacity(0.5))
+                        // 文本输入区域 - 在信纸范围内
+                        ZStack(alignment: .topLeading) {
+                            Rectangle()
+                                .fill(Color.clear)
+                                .frame(width: geometry.size.width * 0.75, height: geometry.size.height * 0.4)
+                            
+                            if appState.letterText.isEmpty {
+                                Text("说说你最与它之间最难忘的故事吧")
+                                    .foregroundColor(.brown.opacity(0.5))
+                                    .font(.system(size: 16))
+                                    .padding(.horizontal, 20)
+                                    .padding(.top, 20)
+                            }
+                            
+                            TextEditor(text: $appState.letterText)
                                 .font(.system(size: 16))
-                                .padding(.horizontal, 20)
-                                .padding(.top, 20)
+                                .foregroundColor(.brown)
+                                .background(Color.clear)
+                                .padding(.horizontal, 15)
+                                .padding(.top, 15)
+                                .scrollContentBackground(.hidden)
                         }
                         
-                        TextEditor(text: $appState.letterText)
-                            .font(.system(size: 16))
-                            .foregroundColor(.brown)
-                            .background(Color.clear)
-                            .padding(.horizontal, 15)
-                            .padding(.top, 15)
-                            .scrollContentBackground(.hidden)
+                        Spacer()
                     }
                     
                     Spacer()
@@ -57,10 +64,10 @@ struct Page5View: View {
                                 .frame(width: 60, height: 60)
                         }
                         
-                        // 中间 - 语音输入按钮（最大的）- 临时禁用语音功能
+                        // 中间 - 语音输入按钮（最大的）- 调出键盘
                         Button(action: {
-                            // 暂时禁用语音功能，避免崩溃
-                            print("语音功能暂时禁用")
+                            // 简化为调出键盘功能
+                            appState.showKeyboard = true
                         }) {
                             Circle()
                                 .fill(Color.clear)
@@ -69,7 +76,7 @@ struct Page5View: View {
                         
                         // 右下角 - 键盘输入按钮
                         Button(action: {
-                            appState.showKeyboard.toggle()
+                            appState.showKeyboard = true
                         }) {
                             Circle()
                                 .fill(Color.clear)
@@ -79,17 +86,23 @@ struct Page5View: View {
                     .padding(.bottom, geometry.size.height * 0.08)
                 }
                 
-                // 发送按钮 - 在信纸的发送区域
+                // 发送按钮 - 在信纸的发送区域，位置调整
                 VStack {
                     Spacer()
-                        .frame(height: geometry.size.height * 0.77)
+                        .frame(height: geometry.size.height * 0.72) // 稍微向上调整
                     
-                    Button(action: {
-                        sendLetter()
-                    }) {
-                        Rectangle()
-                            .fill(Color.clear)
-                            .frame(width: 120, height: 40)
+                    HStack {
+                        Spacer()
+                        
+                        Button(action: {
+                            sendLetter()
+                        }) {
+                            Rectangle()
+                                .fill(Color.clear)
+                                .frame(width: 150, height: 50) // 增大点击区域
+                        }
+                        
+                        Spacer()
                     }
                     
                     Spacer()
@@ -118,6 +131,16 @@ struct Page5View: View {
                 }
             }
         }
+        .onTapGesture {
+            // 点击其他地方隐藏键盘
+            hideKeyboard()
+        }
+    }
+    
+    // 隐藏键盘的方法
+    private func hideKeyboard() {
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        appState.showKeyboard = false
     }
     
     private func sendLetter() {
