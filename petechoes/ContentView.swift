@@ -257,110 +257,141 @@ struct ContentView: View {
                         }
                     }
                 } else if currentPage == 5 {
-                    // 第5页 - 临时页面
+                    // 第5页 - 显示图片5
                     ZStack {
-                        Color.purple.opacity(0.3)
-                            .ignoresSafeArea()
-                        
-                        VStack {
-                            Text("第5页")
-                                .font(.title)
-                                .foregroundColor(.white)
-                            
-                            Button("返回第4页") {
-                                withAnimation(.easeInOut(duration: 0.5)) {
-                                    currentPage = 4
-                                }
-                            }
-                            .padding()
-                            .background(Color.white.opacity(0.3))
-                            .cornerRadius(10)
-                        }
-                    }
-                } else if currentPage == 4 {
-                    // 第4页 - 记忆物品照片上传
-                    ZStack {
-                        Image("4")
+                        Image("5")
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(width: geometry.size.width, height: geometry.size.height)
                             .clipped()
                         
-                        // 4个照片上传区域
+                        // 返回按钮
                         VStack {
-                            Spacer()
-                                .frame(height: 120) // 顶部空间
-                            
-                            // 上面两个照片框
-                            HStack(spacing: 20) {
-                                Spacer()
-                                PhotoUploadArea(
-                                    photoIndex: 0,
-                                    photo: memoryPhotos[0],
-                                    isProcessing: isProcessingPhotos,
-                                    onTap: {
-                                        currentPhotoIndex = 0
-                                        showPhotoActionSheet()
+                            HStack {
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.5)) {
+                                        currentPage = 4
                                     }
-                                )
-                                PhotoUploadArea(
-                                    photoIndex: 1,
-                                    photo: memoryPhotos[1],
-                                    isProcessing: isProcessingPhotos,
-                                    onTap: {
-                                        currentPhotoIndex = 1
-                                        showPhotoActionSheet()
-                                    }
-                                )
-                                Spacer()
-                            }
-                            
-                            Spacer()
-                                .frame(height: 30)
-                            
-                            // 下面两个照片框
-                            HStack(spacing: 20) {
-                                Spacer()
-                                PhotoUploadArea(
-                                    photoIndex: 2,
-                                    photo: memoryPhotos[2],
-                                    isProcessing: isProcessingPhotos,
-                                    onTap: {
-                                        currentPhotoIndex = 2
-                                        showPhotoActionSheet()
-                                    }
-                                )
-                                PhotoUploadArea(
-                                    photoIndex: 3,
-                                    photo: memoryPhotos[3],
-                                    isProcessing: isProcessingPhotos,
-                                    onTap: {
-                                        currentPhotoIndex = 3
-                                        showPhotoActionSheet()
-                                    }
-                                )
-                                Spacer()
-                            }
-                            
-                            Spacer()
-                            
-                            // "就这样吧" 按钮
-                            Button(action: {
-                                withAnimation(.easeInOut(duration: 0.5)) {
-                                    currentPage = 5 // 跳转到第5页
+                                }) {
+                                    Image(systemName: "chevron.left")
+                                        .font(.title2)
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .background(Color.black.opacity(0.3))
+                                        .clipShape(Circle())
                                 }
-                            }) {
-                                Text("就这样吧")
-                                    .font(.system(size: 18, weight: .medium))
-                                    .foregroundColor(.white)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 16)
-                                    .background(Color.orange)
-                                    .cornerRadius(25)
+                                .padding(.leading, 20)
+                                .padding(.top, 20)
+                                
+                                Spacer()
                             }
-                            .padding(.horizontal, 40)
-                            .padding(.bottom, 50)
+                            Spacer()
                         }
+                    }
+                } else if currentPage == 4 {
+                    // 第4页 - 记忆物品照片上传
+                    GeometryReader { geo in
+                        ZStack {
+                            Image("4")
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geo.size.width, height: geo.size.height)
+                                .clipped()
+                            
+                            // 4个照片上传区域 - 根据背景图重新定位
+                            VStack {
+                                Spacer()
+                                    .frame(height: geo.size.height * 0.15) // 顶部空间
+                                
+                                // 上面两个照片框 - 更精确定位
+                                HStack {
+                                    Spacer()
+                                        .frame(width: geo.size.width * 0.12)
+                                    
+                                    PhotoUploadArea(
+                                        photoIndex: 0,
+                                        photo: memoryPhotos[0],
+                                        isProcessing: isProcessingPhotos,
+                                        onTap: {
+                                            currentPhotoIndex = 0
+                                            showPhotoActionSheet()
+                                        }
+                                    )
+                                    
+                                    Spacer()
+                                        .frame(width: geo.size.width * 0.15)
+                                    
+                                    PhotoUploadArea(
+                                        photoIndex: 1,
+                                        photo: memoryPhotos[1],
+                                        isProcessing: isProcessingPhotos,
+                                        onTap: {
+                                            currentPhotoIndex = 1
+                                            showPhotoActionSheet()
+                                        }
+                                    )
+                                    
+                                    Spacer()
+                                        .frame(width: geo.size.width * 0.12)
+                                }
+                                
+                                Spacer()
+                                    .frame(height: geo.size.height * 0.15)
+                                
+                                // 下面两个照片框
+                                HStack {
+                                    Spacer()
+                                        .frame(width: geo.size.width * 0.05)
+                                    
+                                    PhotoUploadArea(
+                                        photoIndex: 2,
+                                        photo: memoryPhotos[2],
+                                        isProcessing: isProcessingPhotos,
+                                        onTap: {
+                                            currentPhotoIndex = 2
+                                            showPhotoActionSheet()
+                                        }
+                                    )
+                                    
+                                    Spacer()
+                                        .frame(width: geo.size.width * 0.55)
+                                    
+                                    PhotoUploadArea(
+                                        photoIndex: 3,
+                                        photo: memoryPhotos[3],
+                                        isProcessing: isProcessingPhotos,
+                                        onTap: {
+                                            currentPhotoIndex = 3
+                                            showPhotoActionSheet()
+                                        }
+                                    )
+                                    
+                                    Spacer()
+                                        .frame(width: geo.size.width * 0.05)
+                                }
+                                
+                                Spacer()
+                            }
+                            
+                            // 透明的"就这样吧"按钮区域 - 覆盖在背景按钮上
+                            VStack {
+                                Spacer()
+                                
+                                Button(action: {
+                                    withAnimation(.easeInOut(duration: 0.5)) {
+                                        currentPage = 5 // 跳转到第5页
+                                    }
+                                }) {
+                                    // 透明按钮，覆盖背景图的按钮区域
+                                    Rectangle()
+                                        .fill(Color.clear)
+                                        .frame(height: 60)
+                                }
+                                .padding(.horizontal, 40)
+                                .padding(.bottom, 50)
+                            }
+                        }
+                    }
                         
                         // 返回按钮
                         VStack {
@@ -389,19 +420,71 @@ struct ContentView: View {
             }
         }
         .ignoresSafeArea()
-        .actionSheet(isPresented: $showImagePicker) {
-            ActionSheet(
-                title: Text("选择照片"),
-                buttons: [
-                    .default(Text("拍照")) {
+        .sheet(isPresented: $showImagePicker) {
+            VStack {
+                HStack {
+                    Button("取消") {
+                        showImagePicker = false
+                    }
+                    .padding()
+                    
+                    Spacer()
+                    
+                    Text("选择照片")
+                        .font(.headline)
+                    
+                    Spacer()
+                    
+                    Color.clear
+                        .frame(width: 60)
+                }
+                .padding()
+                
+                VStack(spacing: 20) {
+                    Button(action: {
+                        showImagePicker = false
                         showCamera = true
-                    },
-                    .default(Text("从相册选择")) {
-                        selectedItem = nil // 触发PhotosPicker
-                    },
-                    .cancel()
-                ]
-            )
+                    }) {
+                        HStack {
+                            Image(systemName: "camera.fill")
+                                .font(.title2)
+                            Text("拍照")
+                                .font(.title3)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(10)
+                    }
+                    .foregroundColor(.primary)
+                    
+                    PhotosPicker(
+                        selection: $selectedItem,
+                        matching: .images,
+                        photoLibrary: .shared()
+                    ) {
+                        HStack {
+                            Image(systemName: "photo.fill")
+                                .font(.title2)
+                            Text("从相册选择")
+                                .font(.title3)
+                            Spacer()
+                        }
+                        .padding()
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(10)
+                    }
+                    .foregroundColor(.primary)
+                    .onChange(of: selectedItem) { newItem in
+                        if newItem != nil {
+                            showImagePicker = false
+                        }
+                    }
+                }
+                .padding()
+                
+                Spacer()
+            }
         }
         .sheet(isPresented: $showCamera) {
             CameraImagePicker(
@@ -760,31 +843,19 @@ struct PhotoUploadArea: View {
     
     var body: some View {
         ZStack {
-            // 虚线框
-            Rectangle()
-                .strokeBorder(style: StrokeStyle(lineWidth: 2, dash: [5]))
-                .foregroundColor(.gray.opacity(0.5))
-                .frame(width: 120, height: 120)
-                .background(Color.white.opacity(0.8))
-            
             if let photo = photo {
                 // 显示选择的照片
                 Image(uiImage: photo)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 115, height: 115)
+                    .frame(width: 120, height: 120)
                     .clipped()
+                    .cornerRadius(8)
             } else {
-                // 显示上传图标
-                VStack(spacing: 8) {
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 24))
-                        .foregroundColor(.brown.opacity(0.7))
-                    
-                    Text("上传照片")
-                        .font(.system(size: 12))
-                        .foregroundColor(.brown.opacity(0.7))
-                }
+                // 透明的触发区域，没有任何视觉元素
+                Rectangle()
+                    .fill(Color.clear)
+                    .frame(width: 120, height: 120)
             }
             
             // 处理中的加载指示器
@@ -792,6 +863,7 @@ struct PhotoUploadArea: View {
                 ZStack {
                     Color.black.opacity(0.6)
                         .frame(width: 120, height: 120)
+                        .cornerRadius(8)
                     
                     ProgressView()
                         .progressViewStyle(CircularProgressViewStyle(tint: .white))
