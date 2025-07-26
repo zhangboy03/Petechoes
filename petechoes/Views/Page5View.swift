@@ -86,24 +86,22 @@ struct Page5View: View {
                     .padding(.bottom, geometry.size.height * 0.08)
                 }
                 
-                // 发送按钮 - 在信纸的发送区域，精确位置调整
+                // 发送按钮 - 在同一高度的最右边
                 VStack {
                     Spacer()
-                        .frame(height: geometry.size.height * 0.62) // 发送按钮向上移动
+                        .frame(height: geometry.size.height * 0.62) // 保持相同高度
                     
                     HStack {
-                        Spacer()
-                            .frame(width: geometry.size.width * 0.1) // 发送按钮向右移动
+                        Spacer() // 自动推到最右边
                         
                         Button(action: {
                             sendLetter()
                         }) {
                             Rectangle()
                                 .fill(Color.clear) // 恢复透明
-                                .frame(width: 180, height: 60)
+                                .frame(width: 120, height: 50) // 调整大小适应右边位置
                         }
-                        
-                        Spacer()
+                        .padding(.trailing, 30) // 距离右边缘30像素
                     }
                     
                     Spacer()
