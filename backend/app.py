@@ -298,14 +298,15 @@ def generate_new_image(image_id):
             
             # BFL API响应格式可能不同，需要根据实际响应调整
             if 'id' in result:
-                # BFL API通常返回任务ID，需要轮询结果
+                # BFL API返回任务ID，需要轮询结果
                 task_id = result['id']
+                polling_url = result.get('polling_url')
                 logger.info(f"✅ 获得任务ID: {task_id}")
+                logger.info(f"✅ 轮询URL: {polling_url}")
                 
-                # 这里可能需要实现轮询逻辑来获取最终结果
-                # 暂时标记为processing，后续可以添加轮询机制
-                update_image_status(image_id, 'processing')
-                logger.info(f"🔄 任务已提交，ID: {task_id}")
+                # 开始轮询结果
+                threading.Thread(target=poll_bfl_result, args=(image_id, task_id, polling_url)).start()
+                logger.info(f"🔄 开始轮询任务结果，ID: {task_id}")
                 
             elif 'url' in result:
                 # 如果直接返回图片URL
@@ -341,6 +342,135 @@ def generate_new_image(image_id):
             
     except Exception as e:
         logger.error(f"❌ 生成图片异常: {e}")
+        update_image_status(image_id, 'failed')
+
+def poll_bfl_result(image_id, task_id, polling_url):
+    """轮询BFL API结果"""
+    try:
+        logger.info(f"🔄 开始轮询任务 {task_id} 的结果...")
+        
+        max_attempts = 60  # 最多轮询5分钟（60次 * 5秒）
+        attempt = 0
+        
+        while attempt < max_attempts:
+            attempt += 1
+            logger.info(f"🔄 轮询第 {attempt} 次...")
+            
+            try:
+                # 使用轮询URL获取结果
+                headers = {
+                    'x-key': BFL_API_KEY,
+                    'Content-Type': 'application/json'
+                }
+                
+                response = requests.get(polling_url, headers=headers, timeout=30)
+                logger.info(f"📡 轮询响应状态码: {response.status_code}")
+                logger.info(f"📡 轮询响应内容: {response.text[:500]}...")
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    
+                    # 检查任务状态
+                    if 'status' in result:
+                        status = result['status']
+                        logger.info(f"📊 任务状态: {status}")
+                        
+                        if status == 'completed':
+                            # 任务完成，获取结果
+                            if 'result' in result and 'url' in result['result']:
+                                generated_image_url = result['result']['url']
+                                logger.info(f"✅ 获得生成图片URL: {generated_image_url}")
+                                
+                                # 下载生成的图片
+                                img_response = requests.get(generated_image_url)
+                                if img_response.status_code == 200:
+                                    # 保存生成的图片到数据库
+                                    conn = get_db_connection()
+                                    if conn:
+                                        cursor = conn.cursor()
+                                        cursor.execute(
+                                            "UPDATE images SET generated_image = %s, status = %s WHERE id = %s",
+                                            (img_response.content, 'completed', image_id)
+                                        )
+                                        conn.commit()
+                                        cursor.close()
+                                        conn.close()
+                                        logger.info(f"✅ 图片 {image_id} 生成成功")
+                                        return  # 成功完成，退出轮询
+                                    else:
+                                        logger.error(f"❌ 数据库连接失败，无法保存生成的图片")
+                                        update_image_status(image_id, 'failed')
+                                        return
+                                else:
+                                    logger.error(f"❌ 下载生成图片失败: {img_response.status_code}")
+                                    update_image_status(image_id, 'failed')
+                                    return
+                            else:
+                                logger.error(f"❌ 任务完成但未找到结果URL: {result}")
+                                update_image_status(image_id, 'failed')
+                                return
+                                
+                        elif status == 'failed':
+                            logger.error(f"❌ BFL任务失败: {result}")
+                            update_image_status(image_id, 'failed')
+                            return
+                        elif status in ['pending', 'running', 'processing']:
+                            logger.info(f"⏳ 任务进行中: {status}")
+                            # 继续轮询
+                        else:
+                            logger.warning(f"⚠️ 未知任务状态: {status}")
+                    else:
+                        # 旧格式响应，检查是否直接包含结果
+                        if 'url' in result:
+                            generated_image_url = result['url']
+                            logger.info(f"✅ 获得生成图片URL: {generated_image_url}")
+                            
+                            # 下载生成的图片
+                            img_response = requests.get(generated_image_url)
+                            if img_response.status_code == 200:
+                                # 保存生成的图片到数据库
+                                conn = get_db_connection()
+                                if conn:
+                                    cursor = conn.cursor()
+                                    cursor.execute(
+                                        "UPDATE images SET generated_image = %s, status = %s WHERE id = %s",
+                                        (img_response.content, 'completed', image_id)
+                                    )
+                                    conn.commit()
+                                    cursor.close()
+                                    conn.close()
+                                    logger.info(f"✅ 图片 {image_id} 生成成功")
+                                    return  # 成功完成，退出轮询
+                                else:
+                                    logger.error(f"❌ 数据库连接失败，无法保存生成的图片")
+                                    update_image_status(image_id, 'failed')
+                                    return
+                            else:
+                                logger.error(f"❌ 下载生成图片失败: {img_response.status_code}")
+                                update_image_status(image_id, 'failed')
+                                return
+                        else:
+                            logger.info(f"⏳ 任务仍在处理中，等待下次轮询...")
+                            
+                elif response.status_code == 404:
+                    logger.warning(f"⚠️ 任务未找到，可能已过期: {task_id}")
+                    update_image_status(image_id, 'failed')
+                    return
+                else:
+                    logger.warning(f"⚠️ 轮询响应异常: {response.status_code}")
+                    
+            except Exception as e:
+                logger.warning(f"⚠️ 轮询请求异常: {e}")
+            
+            # 等待5秒后继续轮询
+            time.sleep(5)
+        
+        # 轮询超时
+        logger.error(f"❌ 轮询超时，任务 {task_id} 未完成")
+        update_image_status(image_id, 'failed')
+        
+    except Exception as e:
+        logger.error(f"❌ 轮询异常: {e}")
         update_image_status(image_id, 'failed')
 
 def update_image_status(image_id, status):
