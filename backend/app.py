@@ -375,10 +375,10 @@ def poll_bfl_result(image_id, task_id, polling_url):
                         status = result['status']
                         logger.info(f"📊 任务状态: {status}")
                         
-                        if status == 'completed':
+                        if status == 'completed' or status == 'Ready':
                             # 任务完成，获取结果
-                            if 'result' in result and 'url' in result['result']:
-                                generated_image_url = result['result']['url']
+                            if 'result' in result and 'sample' in result['result']:
+                                generated_image_url = result['result']['sample']
                                 logger.info(f"✅ 获得生成图片URL: {generated_image_url}")
                                 
                                 # 下载生成的图片
@@ -418,7 +418,7 @@ def poll_bfl_result(image_id, task_id, polling_url):
                             logger.info(f"⏳ 任务进行中: {status}")
                             # 继续轮询
                         else:
-                            logger.warning(f"⚠️ 未知任务状态: {status}")
+                            logger.warning(f"⚠️ 未知任务状态: {status}，继续轮询...")
                     else:
                         # 旧格式响应，检查是否直接包含结果
                         if 'url' in result:
