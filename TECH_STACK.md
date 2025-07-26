@@ -1,4 +1,4 @@
-# 📊 PetEchoes 技术栈详解
+# 📊 PetEcho 技术栈详解
 
 ## 🍎 前端技术栈 (iOS)
 
@@ -188,4 +188,4 @@ UI Update ← JSON Response ← AI Processing ← Data Storage
 - **异步处理** - AI任务后台处理
 - **错误重试** - 网络请求容错
 
-这个技术栈确保了PetEchoes能够提供流畅、稳定、高质量的用户体验，同时保证了代码的可维护性和扩展性。 
+这个技术栈确保了PetEcho能够提供流畅、稳定、高质量的用户体验，同时保证了代码的可维护性和扩展性。 
