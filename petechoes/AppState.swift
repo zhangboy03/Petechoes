@@ -3,8 +3,8 @@ import PhotosUI
 
 @MainActor
 class AppState: ObservableObject {
-    // 页面导航
-    @Published var currentPage: Int = 1
+    // 页面导航，0为启动页面
+    @Published var currentPage: Int = 0
     
     // 图片选择状态
     @Published var selectedItem: PhotosPickerItem? = nil

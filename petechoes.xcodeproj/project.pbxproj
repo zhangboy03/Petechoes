@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		165629D22E35829F00BB3720 /* bgm.MP3 in Resources */ = {isa = PBXBuildFile; fileRef = 165629D12E35829F00BB3720 /* bgm.MP3 */; };
+		165629E42E358D1600BB3720 /* startup_animation.mov in Resources */ = {isa = PBXBuildFile; fileRef = 165629E32E358D1600BB3720 /* startup_animation.mov */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +33,7 @@
 		165629862E33CA8E00BB3720 /* petechoesTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = petechoesTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		165629902E33CA8E00BB3720 /* petechoesUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = petechoesUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		165629D12E35829F00BB3720 /* bgm.MP3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = bgm.MP3; sourceTree = "<group>"; };
+		165629E32E358D1600BB3720 /* startup_animation.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = startup_animation.mov; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -82,6 +84,7 @@
 			children = (
 				1656297B2E33CA8D00BB3720 /* petechoes */,
 				165629D12E35829F00BB3720 /* bgm.MP3 */,
+				165629E32E358D1600BB3720 /* startup_animation.mov */,
 				165629892E33CA8E00BB3720 /* petechoesTests */,
 				165629932E33CA8E00BB3720 /* petechoesUITests */,
 				1656297A2E33CA8D00BB3720 /* Products */,
@@ -218,6 +221,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				165629E42E358D1600BB3720 /* startup_animation.mov in Resources */,
 				165629D22E35829F00BB3720 /* bgm.MP3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

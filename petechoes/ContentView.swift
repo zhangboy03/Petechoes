@@ -15,6 +15,8 @@ struct ContentView: View {
     var body: some View {
         ZStack {
             switch appState.currentPage {
+            case 0:
+                SplashScreenView(appState: appState)
             case 1:
                 Page1View(appState: appState)
             case 2:
