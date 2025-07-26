@@ -1,13 +1,7 @@
 import SwiftUI
-import AVFoundation
-import Speech
 
 struct Page5View: View {
     @ObservedObject var appState: AppState
-    @State private var speechRecognizer = SFSpeechRecognizer()
-    @State private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
-    @State private var recognitionTask: SFSpeechRecognitionTask?
-    @State private var audioEngine = AVAudioEngine()
     
     var body: some View {
         GeometryReader { geometry in
@@ -63,19 +57,14 @@ struct Page5View: View {
                                 .frame(width: 60, height: 60)
                         }
                         
-                        // 中间 - 语音输入按钮（最大的）
+                        // 中间 - 语音输入按钮（最大的）- 临时禁用语音功能
                         Button(action: {
-                            if appState.isRecording {
-                                stopRecording()
-                            } else {
-                                startRecording()
-                            }
+                            // 暂时禁用语音功能，避免崩溃
+                            print("语音功能暂时禁用")
                         }) {
                             Circle()
                                 .fill(Color.clear)
                                 .frame(width: 80, height: 80)
-                                .scaleEffect(appState.isRecording ? 1.2 : 1.0)
-                                .animation(.easeInOut(duration: 0.3), value: appState.isRecording)
                         }
                         
                         // 右下角 - 键盘输入按钮
@@ -129,101 +118,6 @@ struct Page5View: View {
                 }
             }
         }
-        .onAppear {
-            requestPermissions()
-        }
-        .onChange(of: appState.showKeyboard) { _, show in
-            // 这里可以处理键盘显示逻辑
-        }
-    }
-    
-    // MARK: - 语音识别功能
-    
-    private func requestPermissions() {
-        SFSpeechRecognizer.requestAuthorization { authStatus in
-            DispatchQueue.main.async {
-                // 处理授权结果
-            }
-        }
-        
-        AVAudioSession.sharedInstance().requestRecordPermission { granted in
-            DispatchQueue.main.async {
-                // 处理录音权限
-            }
-        }
-    }
-    
-    private func startRecording() {
-        guard let speechRecognizer = speechRecognizer, speechRecognizer.isAvailable else {
-            return
-        }
-        
-        // 停止之前的任务
-        recognitionTask?.cancel()
-        recognitionTask = nil
-        
-        // 配置音频会话
-        let audioSession = AVAudioSession.sharedInstance()
-        do {
-            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
-            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-        } catch {
-            print("音频会话配置失败: \(error)")
-            return
-        }
-        
-        // 创建识别请求
-        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-        guard let recognitionRequest = recognitionRequest else {
-            return
-        }
-        
-        recognitionRequest.shouldReportPartialResults = true
-        
-        // 创建识别任务
-        recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) { result, error in
-            if let result = result {
-                DispatchQueue.main.async {
-                    appState.letterText = result.bestTranscription.formattedString
-                }
-            }
-            
-            if error != nil || result?.isFinal == true {
-                DispatchQueue.main.async {
-                    self.stopRecording()
-                }
-            }
-        }
-        
-        // 配置音频引擎
-        let inputNode = audioEngine.inputNode
-        let recordingFormat = inputNode.outputFormat(forBus: 0)
-        
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
-            recognitionRequest.append(buffer)
-        }
-        
-        audioEngine.prepare()
-        
-        do {
-            try audioEngine.start()
-            appState.isRecording = true
-        } catch {
-            print("音频引擎启动失败: \(error)")
-        }
-    }
-    
-    private func stopRecording() {
-        audioEngine.stop()
-        audioEngine.inputNode.removeTap(onBus: 0)
-        
-        recognitionRequest?.endAudio()
-        recognitionRequest = nil
-        
-        recognitionTask?.cancel()
-        recognitionTask = nil
-        
-        appState.isRecording = false
     }
     
     private func sendLetter() {

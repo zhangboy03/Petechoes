@@ -24,7 +24,6 @@ class AppState: ObservableObject {
     // 第5页信件相关
     @Published var letterText = ""
     @Published var showKeyboard = false
-    @Published var isRecording = false
     @Published var letterSent = false
     
     // 导航方法

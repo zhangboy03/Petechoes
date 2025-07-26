@@ -53,7 +53,7 @@ struct Page4View: View {
                             )
                         }
                         .padding(.trailing, geometry.size.width * 0.08)
-                        .padding(.bottom, geometry.size.height * 0.32) // 增加底部间距，避免与按钮重叠
+                        .padding(.bottom, geometry.size.height * 0.18)
                     }
                 }
                 
