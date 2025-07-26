@@ -1,0 +1,13 @@
+{
+  "services": [
+    {
+      "name": "petechoes-backend",
+      "buildCommand": "pip install -r requirements.txt",
+      "startCommand": "python app.py",
+      "rootDirectory": ".",
+      "environment": {
+        "PYTHON_VERSION": "3.11"
+      }
+    }
+  ]
+} 
