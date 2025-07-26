@@ -17,9 +17,9 @@ struct Page4View: View {
                 // 4个照片上传区域 - 左侧三张竖着排列，右下一张
                 HStack {
                     // 左侧三张照片竖着排列
-                    VStack(spacing: geometry.size.height * 0.08) {
+                    VStack(spacing: geometry.size.height * 0.06) {
                         Spacer()
-                            .frame(height: geometry.size.height * 0.18)
+                            .frame(height: geometry.size.height * 0.14)
                         
                         ForEach(0..<3, id: \.self) { index in
                             MemoryPhotoArea(
@@ -53,7 +53,7 @@ struct Page4View: View {
                             )
                         }
                         .padding(.trailing, geometry.size.width * 0.08)
-                        .padding(.bottom, geometry.size.height * 0.25)
+                        .padding(.bottom, geometry.size.height * 0.18)
                     }
                 }
                 
