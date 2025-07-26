@@ -19,12 +19,12 @@ struct Page5View: View {
                     
                     HStack {
                         Spacer()
-                            .frame(width: geometry.size.width * 0.08) // 继续向右移动
+                            .frame(width: geometry.size.width * 0.12) // 文本框再向右一些
                         
                         // 文本输入区域 - 大幅缩小范围，避免覆盖发送按钮
                         ZStack(alignment: .topLeading) {
                             Rectangle()
-                                .fill(Color.blue.opacity(0.2)) // 临时显示文本框区域，方便调试
+                                .fill(Color.clear) // 恢复透明
                                 .frame(width: geometry.size.width * 0.7, height: geometry.size.height * 0.25) // 大幅缩小高度
                             
                             if appState.letterText.isEmpty {
@@ -86,21 +86,21 @@ struct Page5View: View {
                     .padding(.bottom, geometry.size.height * 0.08)
                 }
                 
-                // 发送按钮 - 在信纸的发送区域，确保不被文本框覆盖
+                // 发送按钮 - 在信纸的发送区域，精确位置调整
                 VStack {
                     Spacer()
-                        .frame(height: geometry.size.height * 0.68) // 进一步向上调整，避免与文本框重叠
+                        .frame(height: geometry.size.height * 0.62) // 发送按钮向上移动
                     
                     HStack {
                         Spacer()
+                            .frame(width: geometry.size.width * 0.1) // 发送按钮向右移动
                         
                         Button(action: {
-                            print("发送按钮被点击") // 调试用
                             sendLetter()
                         }) {
                             Rectangle()
-                                .fill(Color.red.opacity(0.3)) // 临时显示按钮区域，方便调试
-                                .frame(width: 180, height: 60) // 进一步增大点击区域
+                                .fill(Color.clear) // 恢复透明
+                                .frame(width: 180, height: 60)
                         }
                         
                         Spacer()
